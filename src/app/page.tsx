@@ -1,14 +1,14 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { CodeInput } from '@/components/code-input';
 import { CodeExplanationDisplay } from '@/components/code-explanation-display';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import type { CodeExplanation } from '@/services/github'; // Use the enhanced type
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Info, Github, Eye } from 'lucide-react'; // Import Github and Eye icons
+import { Info, Github } from 'lucide-react'; // Import Github icon
 
 export default function Home() {
   // State now holds the enhanced CodeExplanation object
@@ -16,15 +16,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [agentStatus, setAgentStatus] = useState<string | null>(null); // For agent messages
-  const [viewCount, setViewCount] = useState<number | string>('...'); // State for view counter
-
-  useEffect(() => {
-    // Simulate fetching/setting a view count only on the client-side
-    // A true live counter requires backend infrastructure (WebSockets, etc.)
-    // This is a placeholder to prevent hydration errors.
-    const simulatedCount = Math.floor(Math.random() * 150) + 10; // Example random count
-    setViewCount(simulatedCount);
-  }, []); // Empty dependency array ensures this runs once on mount
+  // Removed viewCount state and useEffect
 
   const handleExplanationUpdate = (
     data: CodeExplanation | null, // Expects the enhanced type
@@ -56,13 +48,8 @@ export default function Home() {
           <p className="text-sm text-muted-foreground">Your AI Code Review & Explanation Agent</p>
         </div>
 
-        {/* Right-aligned section for GitHub link and view counter */}
+        {/* Right-aligned section for GitHub link */}
         <div className="absolute top-4 right-4 flex items-center gap-4">
-          {/* View Counter */}
-          <div className="flex items-center gap-1 text-sm text-muted-foreground" title="Simulated live views (client-side)">
-            <Eye className="h-4 w-4" />
-            <span>{viewCount} watching</span>
-          </div>
           {/* GitHub Link */}
            <div className="flex items-center gap-1 text-sm text-muted-foreground">
              <span>Developed by</span>
@@ -125,4 +112,3 @@ export default function Home() {
     </div>
   );
 }
-
