@@ -79,7 +79,7 @@ export function CodeExplanationDisplay({ explanationData, isLoading, error, onCl
             "Best Practices"
         ];
 
-        const generatedLinks: LearnMoreLink[] = concepts.map(concept => {
+        const generatedLinks: LearnMoreLink[] = concepts.slice(0, 10).map(concept => { // Limit to 10 links
             const searchTerm = `${language} ${concept} tutorial`;
             return {
                 title: `${language}: ${concept}`,
@@ -203,7 +203,8 @@ export function CodeExplanationDisplay({ explanationData, isLoading, error, onCl
         </Card>
 
         {/* Accordion for Suggestions and Analysis */}
-        <Accordion type="multiple" collapsible className="w-full">
+        {/* Removed collapsible prop as it causes warnings with type="multiple" */}
+        <Accordion type="multiple" className="w-full">
           {/* Warnings */}
           {renderSection("General Warnings & Suggestions", <AlertTriangle className="h-4 w-4 text-destructive" />, explanationData.warnings, (warning, index) => (
             <li key={`warn-${index}`} className="border-l-2 border-destructive pl-3 py-1">{warning}</li>
