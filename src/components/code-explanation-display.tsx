@@ -1,7 +1,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -10,7 +10,16 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Copy, AlertTriangle, Info, Brain, RefreshCw, BookOpen, Lightbulb, Bug, ShieldAlert, DraftingCompass, GitCompareArrows, Terminal } from 'lucide-react';
+import { Copy, AlertTriangle, Info, Brain, RefreshCw, BookOpen, Lightbulb, Bug, ShieldAlert, DraftingCompass, GitCompareArrows, Terminal, ExternalLink } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import type { CodeExplanation } from '@/services/github';
 import { cn } from '@/lib/utils'; // Import cn utility
@@ -22,8 +31,15 @@ interface CodeExplanationDisplayProps {
   onClear: () => void;
 }
 
+interface LearnMoreLink {
+  title: string;
+  url: string;
+}
+
 export function CodeExplanationDisplay({ explanationData, isLoading, error, onClear }: CodeExplanationDisplayProps) {
   const { toast } = useToast();
+  const [isLearnMoreDialogOpen, setIsLearnMoreDialogOpen] = useState(false);
+  const [learnMoreLinks, setLearnMoreLinks] = useState<LearnMoreLink[]>([]);
 
   const handleCopy = (textToCopy: string, type: string) => {
     if (textToCopy) {
@@ -45,28 +61,44 @@ export function CodeExplanationDisplay({ explanationData, isLoading, error, onCl
     }
   };
 
-  // Updated Learn More button handler
+  // Updated Learn More button handler to generate links and open dialog
   const handleLearnMore = () => {
     const language = explanationData?.language;
     if (language && language !== "Unknown") {
-        // Construct search URLs - examples:
-        const mdnSearchUrl = `https://developer.mozilla.org/en-US/search?q=${encodeURIComponent(language)}`;
-        const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(language + " programming language concepts tutorial")}`;
+        // Basic concepts to search for - could be enhanced by analyzing explanation content
+        const concepts = [
+            "Basics",
+            "Syntax",
+            "Functions",
+            "Control Flow (if/else, loops)",
+            "Data Structures (arrays, objects/maps)",
+            "Error Handling",
+            "Asynchronous Programming (if applicable)", // Add more relevant general concepts
+            "Classes and Objects",
+            "Modules/Imports",
+            "Best Practices"
+        ];
 
-        // Open the MDN search in a new tab (good for web languages)
-        // You could prioritize based on language or offer choices
-        window.open(googleSearchUrl, '_blank', 'noopener,noreferrer');
+        const generatedLinks: LearnMoreLink[] = concepts.map(concept => {
+            const searchTerm = `${language} ${concept} tutorial`;
+            return {
+                title: `${language}: ${concept}`,
+                url: `https://www.google.com/search?q=${encodeURIComponent(searchTerm)}`
+            };
+        });
+
+        setLearnMoreLinks(generatedLinks);
+        setIsLearnMoreDialogOpen(true); // Open the dialog
 
         toast({
             title: "Learn More",
-            description: `Opening search results for ${language} concepts in a new tab.`,
+            description: `Showing learning resources for ${language}.`,
         });
     } else {
-        // Fallback if language is unknown or not available
         toast({
             title: "Learn More",
             description: "Cannot determine the language to search for. Try analyzing a different snippet.",
-            variant: "default" // Changed from destructive as it's not really an error
+            variant: "default"
         });
     }
    };
@@ -153,7 +185,7 @@ export function CodeExplanationDisplay({ explanationData, isLoading, error, onCl
           </CardHeader>
           <CardContent>
             {/* Added dark background container for explanation */}
-            <div className="bg-secondary text-secondary-foreground p-4 rounded-lg shadow-inner">
+             <div className="bg-secondary text-secondary-foreground p-4 rounded-lg shadow-inner">
                 <div className={cn(
                     "prose prose-sm max-w-none", // Base prose styles
                     "prose-headings:text-secondary-foreground prose-p:text-secondary-foreground prose-strong:text-secondary-foreground prose-ul:text-secondary-foreground prose-li:text-secondary-foreground", // Force text color
@@ -274,6 +306,47 @@ export function CodeExplanationDisplay({ explanationData, isLoading, error, onCl
                 <Copy className="mr-1.5 h-4 w-4" /> Copy Explanation
             </Button>
          </div>
+
+        {/* Learn More Dialog */}
+         <Dialog open={isLearnMoreDialogOpen} onOpenChange={setIsLearnMoreDialogOpen}>
+           <DialogContent className="sm:max-w-[525px]">
+             <DialogHeader>
+               <DialogTitle className="flex items-center gap-2">
+                  <BookOpen className="h-5 w-5" /> Learn More: {explanationData?.language || 'Code Concepts'}
+               </DialogTitle>
+               <DialogDescription>
+                 Explore these resources to deepen your understanding of concepts related to the analyzed code.
+               </DialogDescription>
+             </DialogHeader>
+             <ScrollArea className="max-h-[60vh] pr-6">
+                <div className="grid gap-3 py-4">
+                  {learnMoreLinks.length > 0 ? (
+                    learnMoreLinks.map((link, index) => (
+                      <a
+                        key={index}
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-between p-3 rounded-md border hover:bg-accent hover:text-accent-foreground transition-colors text-sm group"
+                      >
+                        <span className="font-medium">{link.title}</span>
+                        <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-accent-foreground" />
+                      </a>
+                    ))
+                  ) : (
+                    <p className="text-muted-foreground text-center">No specific concepts identified for searching.</p>
+                  )}
+                </div>
+             </ScrollArea>
+             <DialogFooter>
+                <DialogClose asChild>
+                 <Button type="button" variant="secondary">
+                   Close
+                 </Button>
+               </DialogClose>
+             </DialogFooter>
+           </DialogContent>
+         </Dialog>
     </div>
   );
 }
