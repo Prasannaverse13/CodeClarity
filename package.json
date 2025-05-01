@@ -12,6 +12,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@azure-rest/ai-inference": "^1.0.0-beta.2",
+    "@azure/core-auth": "^1.8.0",
+    "@azure/core-sse": "^1.0.0",
     "@genkit-ai/googleai": "^1.6.2",
     "@genkit-ai/next": "^1.6.2",
     "@hookform/resolvers": "^4.1.3",
