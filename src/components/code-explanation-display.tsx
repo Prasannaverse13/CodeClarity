@@ -1,9 +1,8 @@
 
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import ReactMarkdown from 'react-markdown';
-// import mermaid from 'mermaid'; // Removed mermaid import
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -11,11 +10,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Copy, AlertTriangle, Info, Brain, RefreshCw, BookOpen, Lightbulb, Bug, ShieldAlert, DraftingCompass, GitCompareArrows, Terminal } from 'lucide-react'; // Removed Workflow icon
+import { Copy, AlertTriangle, Info, Brain, RefreshCw, BookOpen, Lightbulb, Bug, ShieldAlert, DraftingCompass, GitCompareArrows, Terminal } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import type { CodeExplanation } from '@/services/github';
-
-// Mermaid configuration removed
+import { cn } from '@/lib/utils'; // Import cn utility
 
 interface CodeExplanationDisplayProps {
   explanationData: CodeExplanation | null;
@@ -26,11 +24,6 @@ interface CodeExplanationDisplayProps {
 
 export function CodeExplanationDisplay({ explanationData, isLoading, error, onClear }: CodeExplanationDisplayProps) {
   const { toast } = useToast();
-  // const [isClient, setIsClient] = useState(false); // Removed isClient state
-
-  // Removed client-side mount effect
-
-  // Removed mermaid rendering effect
 
   const handleCopy = (textToCopy: string, type: string) => {
     if (textToCopy) {
@@ -52,20 +45,33 @@ export function CodeExplanationDisplay({ explanationData, isLoading, error, onCl
     }
   };
 
-  // Enable Learn More button
+  // Updated Learn More button handler
   const handleLearnMore = () => {
-     // Simple implementation: show a toast or alert
-     toast({
-       title: "Learn More",
-       description: "Feature under development. Educational content related to the code concepts will be shown here.",
-     });
-     // In a real implementation, this could:
-     // - Fetch relevant documentation/articles based on explanationData.language or concepts mentioned.
-     // - Open a modal/sidebar with educational content.
-     // - Link to external resources (e.g., MDN, language docs).
+    const language = explanationData?.language;
+    if (language && language !== "Unknown") {
+        // Construct search URLs - examples:
+        const mdnSearchUrl = `https://developer.mozilla.org/en-US/search?q=${encodeURIComponent(language)}`;
+        const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(language + " programming language concepts tutorial")}`;
+
+        // Open the MDN search in a new tab (good for web languages)
+        // You could prioritize based on language or offer choices
+        window.open(googleSearchUrl, '_blank', 'noopener,noreferrer');
+
+        toast({
+            title: "Learn More",
+            description: `Opening search results for ${language} concepts in a new tab.`,
+        });
+    } else {
+        // Fallback if language is unknown or not available
+        toast({
+            title: "Learn More",
+            description: "Cannot determine the language to search for. Try analyzing a different snippet.",
+            variant: "default" // Changed from destructive as it's not really an error
+        });
+    }
    };
+
   const handleExplainAnother = () => { onClear(); toast({ title: "Explain Another", description: "Ready for new input!" }); };
-  // Removed placeholder functions for refactor, security, test gen as they weren't implemented
 
   const renderSection = (title: string, icon: React.ReactNode, data: string[] | undefined | null, renderItem: (item: any, index: number) => React.ReactNode) => {
     if (!data || data.length === 0) return null;
@@ -146,8 +152,17 @@ export function CodeExplanationDisplay({ explanationData, isLoading, error, onCl
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="prose prose-sm dark:prose-invert max-w-none text-foreground prose-headings:text-foreground prose-strong:text-foreground prose-code:text-accent-foreground dark:prose-code:text-accent-foreground prose-a:text-primary prose-pre:bg-secondary prose-pre:text-secondary-foreground">
-              <ReactMarkdown>{explanationData.explanation_markdown}</ReactMarkdown>
+            {/* Added dark background container for explanation */}
+            <div className="bg-secondary text-secondary-foreground p-4 rounded-lg shadow-inner">
+                <div className={cn(
+                    "prose prose-sm max-w-none", // Base prose styles
+                    "prose-headings:text-secondary-foreground prose-p:text-secondary-foreground prose-strong:text-secondary-foreground prose-ul:text-secondary-foreground prose-li:text-secondary-foreground", // Force text color
+                    "prose-code:text-accent prose-code:bg-accent/10 prose-code:px-1 prose-code:py-0.5 prose-code:rounded", // Specific inline code styling for dark bg
+                    "prose-pre:bg-background prose-pre:text-foreground prose-pre:p-3 prose-pre:rounded-md prose-pre:overflow-x-auto", // Code block styling for dark bg
+                    "prose-a:text-primary hover:prose-a:underline" // Link styling
+                 )}>
+                    <ReactMarkdown>{explanationData.explanation_markdown}</ReactMarkdown>
+                </div>
             </div>
              <Button onClick={() => handleCopy(explanationData.explanation_markdown, "Explanation")} variant="ghost" size="sm" className="mt-2 text-xs text-muted-foreground hover:text-primary">
                 <Copy className="mr-1.5 h-3 w-3" /> Copy Explanation
@@ -228,8 +243,6 @@ export function CodeExplanationDisplay({ explanationData, isLoading, error, onCl
              </AccordionItem>
           )}
 
-           {/* Flowchart section removed */}
-
         </Accordion>
 
       </div>
@@ -244,8 +257,8 @@ export function CodeExplanationDisplay({ explanationData, isLoading, error, onCl
 
        {/* Action Buttons */}
       <div className="flex flex-wrap gap-2 justify-end items-center mt-auto pt-4 border-t">
-           {/* Enabled Learn More Button */}
-            <Button onClick={handleLearnMore} variant="ghost" size="sm" className="text-primary hover:bg-primary/10">
+           {/* Updated Learn More Button */}
+            <Button onClick={handleLearnMore} variant="ghost" size="sm" className="text-primary hover:bg-primary/10" disabled={isLoading || !explanationData || !explanationData.language || explanationData.language === 'Unknown'}>
                 <BookOpen className="mr-1.5 h-4 w-4" /> Learn More
             </Button>
             <Button onClick={handleExplainAnother} variant="outline" size="sm" className="text-foreground border-border hover:bg-accent/50">

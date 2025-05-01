@@ -12,23 +12,23 @@ body {
     /* Light Gray Background (#F5F5F5) */
     --background: 0 0% 96.1%;
     /* Darker Gray Foreground for better contrast */
-    --foreground: 0 0% 15%; /* Changed from 20% */
+    --foreground: 0 0% 9%; /* Darkened further for better visibility */
 
     /* Card styles aligned with background */
     --card: 0 0% 100%; /* Slightly whiter card for depth */
-    --card-foreground: 0 0% 15%; /* Match foreground */
+    --card-foreground: 0 0% 9%; /* Match foreground */
 
     /* Popover styles aligned with background */
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 15%; /* Match foreground */
+    --popover-foreground: 0 0% 9%; /* Match foreground */
 
     /* Teal Primary/Accent (#008080) */
     --primary: 180 100% 25.1%;
     --primary-foreground: 180 100% 95%; /* Lighter shade for contrast on teal */
 
     /* Secondary based on background/foreground */
-    --secondary: 0 0% 90%; /* Slightly darker gray */
-    --secondary-foreground: 0 0% 9%; /* Darker text for secondary */
+    --secondary: 0 0% 14%; /* Darker secondary for explanation background */
+    --secondary-foreground: 0 0% 96.1%; /* Lighter text for secondary background */
 
     /* Muted based on background */
     --muted: 0 0% 90%;
@@ -60,7 +60,7 @@ body {
 
     /* Sidebar theme (using main theme for simplicity) */
     --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 0 0% 15%; /* Match foreground */
+    --sidebar-foreground: 0 0% 9%; /* Match foreground */
     --sidebar-primary: 180 100% 25.1%;
     --sidebar-primary-foreground: 180 100% 95%;
     --sidebar-accent: 0 0% 90%;
@@ -86,8 +86,9 @@ body {
     --primary: 180 100% 35%; /* Slightly lighter teal for dark mode */
     --primary-foreground: 0 0% 98%;
 
-    --secondary: 0 0% 20%; /* Match original dark background */
-    --secondary-foreground: 0 0% 98%;
+    /* Keep secondary consistent for explanation box in both themes */
+    --secondary: 0 0% 14%;
+    --secondary-foreground: 0 0% 96.1%;
 
     --muted: 0 0% 20%;
     --muted-foreground: 0 0% 63.9%;
@@ -135,12 +136,15 @@ body {
   .prose h3 { @apply text-lg font-semibold mt-4 mb-2 border-b pb-1; }
   .prose ul { @apply list-disc pl-5 space-y-1 my-2; }
   .prose p { @apply leading-relaxed my-2; }
-  /* Use a slightly darker background for inline code in light mode for better contrast */
+  /* Default inline code */
   .prose code { @apply bg-muted/70 px-1 py-0.5 rounded text-sm font-mono text-accent-foreground dark:bg-muted dark:text-accent-foreground; }
   .prose pre { @apply bg-secondary p-3 rounded-md overflow-x-auto my-3; } /* Styling for code blocks */
   .prose pre code { @apply bg-transparent p-0 text-secondary-foreground; } /* Reset inner code styling */
   .prose strong { @apply font-semibold; }
   .prose a { @apply text-primary hover:underline; }
+
+  /* Removed conflicting .bg-secondary rules as they are handled in the component */
+
 }
 
 @layer utilities {
