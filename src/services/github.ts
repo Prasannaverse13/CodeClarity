@@ -6,13 +6,17 @@ import ModelClient, { isUnexpected, type ChatRequestMessage } from "@azure-rest/
 import { AzureKeyCredential } from "@azure/core-auth";
 
 /**
- * Represents a code explanation, including the explanation and potential warnings.
+ * Represents a code explanation, including the explanation, potential warnings, and detected language.
  */
 export interface CodeExplanation {
   /**
-   * The explanation of the code.
+   * The detected programming language of the code snippet.
    */
-  explanation: string;
+  language?: string;
+  /**
+   * The explanation of the code, formatted in markdown.
+   */
+  explanation_markdown: string;
   /**
    * Any warnings associated with the code. Can be undefined or an empty array.
    */
@@ -37,7 +41,7 @@ const client = ModelClient(
 );
 
 /**
- * Asynchronously retrieves a code explanation from the GitHub model API.
+ * Asynchronously retrieves a code explanation from the GitHub model API, formatted for the AI Agent.
  *
  * @param codeSnippet The code snippet to explain.
  * @returns A promise that resolves to a CodeExplanation object.
@@ -53,93 +57,117 @@ export async function getCodeExplanation(codeSnippet: string): Promise<CodeExpla
   const messages: ChatRequestMessage[] = [
     {
       role: "system",
-      content: `You are an expert software developer acting as a code explainer.
-Your task is to analyze the provided code snippet and return a clear, concise explanation suitable for other developers.
-Focus on the code's purpose, logic, and key operations.
-If you identify potential issues, areas for improvement, or important caveats, include them as warnings.
+      content: `You are an expert software developer acting as a code reviewer and explainer AI agent.
+Your task is to analyze the provided code snippet and return a comprehensive analysis.
 
-**IMPORTANT**: Structure your response strictly as a JSON object with the following format:
+1.  **Detect Language**: Identify the programming language.
+2.  **Explain Code**: Provide a clear, step-by-step explanation using markdown. Follow this structure:
+    ### 🔍 What this code does:
+    - Describe the primary function or purpose.
+    - Detail inputs and outputs.
+    - Explain key internal steps/logic. Use bullet points for clarity.
+    - Mention conditions (if/else).
+
+    ### 💡 Summary:
+    - Provide a concise summary of the code's main purpose.
+3.  **Identify Warnings/Suggestions**: List potential issues, risks (like security vulnerabilities, infinite loops, missing validation), or areas for improvement (like renaming variables, refactoring opportunities).
+
+**Output Format**: Structure your response STRICTLY as a JSON object:
+\`\`\`json
 {
-  "explanation": "A detailed explanation of the code goes here.",
-  "warnings": ["Optional warning 1", "Optional warning 2"]
+  "language": "Detected language (e.g., Python, JavaScript)",
+  "explanation_markdown": "### 🔍 What this code does:\\n- Point 1\\n- Point 2\\n\\n### 💡 Summary:\\nSummary text.\\n",
+  "warnings": ["Optional warning/suggestion 1", "Optional warning/suggestion 2"]
 }
-- The 'explanation' field is mandatory and should contain the main explanation text.
-- The 'warnings' field is optional. If present, it MUST be an array of strings. If there are no warnings, you can either omit the 'warnings' field or provide an empty array [].
-Do not include any text outside of this JSON structure.`,
+\`\`\`
+- 'language' field is mandatory.
+- 'explanation_markdown' field is mandatory and must contain the structured markdown explanation.
+- 'warnings' field is optional. If present, it MUST be an array of strings. If none, provide an empty array [] or omit the field.
+- Ensure the markdown uses newline characters (\\n) appropriately within the JSON string.
+- Do NOT include any text outside this JSON structure.`,
     },
     { role: "user", content: `Explain the following code snippet:\n\n\`\`\`\n${codeSnippet}\n\`\`\`` },
   ];
 
   try {
-    // Make the API call to the GitHub model endpoint.
+    console.log("Sending request to GitHub Model API...");
     const response = await client.path("/chat/completions").post({
       body: {
         messages: messages,
         model: "openai/gpt-4o", // Specify the desired model
-        temperature: 0.5,        // Adjust temperature for desired creativity vs determinism
-        max_tokens: 1024,       // Limit response length
+        temperature: 0.3,        // Lower temperature for more focused, structured output
+        max_tokens: 1500,       // Adjust as needed
         top_p: 1,
-        // response_format: { type: "json_object" } // Request JSON output if supported reliably by the specific endpoint/model
+        // response_format: { type: "json_object" } // Keep commented out unless confirmed reliable
       },
-      contentType: "application/json", // Ensure correct content type
+      contentType: "application/json",
     });
+    console.log("Received response from GitHub Model API.");
 
-    // Check for unexpected HTTP status codes.
+
     if (isUnexpected(response)) {
       const errorBody = response.body?.error;
       console.error("GitHub Model API Error:", errorBody || `Status ${response.status}`);
-      // Provide a more informative error message.
       throw new Error(`GitHub Model API request failed with status ${response.status}: ${errorBody?.message || 'Unknown API error'}. Check your GITHUB_TOKEN and API endpoint.`);
     }
 
-    // Extract the content from the response.
     const content = response.body.choices?.[0]?.message?.content;
 
     if (!content) {
       throw new Error("Received an empty or invalid response content from the GitHub Model API.");
     }
 
-    // Attempt to parse the response content as JSON, expecting the format defined in the system prompt.
+    console.log("Raw API Response Content:", content); // Log raw content for debugging
+
     try {
-      const parsedResponse: CodeExplanation = JSON.parse(content);
+      // Clean potential markdown code block fences if the model wraps the JSON
+      const cleanedContent = content.replace(/^```json\s*|```$/g, '').trim();
+      const parsedResponse = JSON.parse(cleanedContent) as Partial<CodeExplanation>; // Use Partial for initial parsing
 
-      // Validate the parsed structure.
-      if (typeof parsedResponse.explanation !== 'string' || !parsedResponse.explanation.trim()) {
-        throw new Error("Parsed response is missing a valid 'explanation' field.");
+      // --- Validation ---
+      if (typeof parsedResponse.language !== 'string' || !parsedResponse.language.trim()) {
+          console.warn("Parsed response is missing a valid 'language' field or it's empty. Setting to 'Unknown'.");
+          parsedResponse.language = 'Unknown';
       }
-
-      // Ensure 'warnings', if present, is an array. Provide an empty array otherwise.
-       if (parsedResponse.warnings && !Array.isArray(parsedResponse.warnings)) {
-            console.warn("Received non-array 'warnings' field, normalizing to array.");
-            // Attempt basic normalization, e.g., wrap single string in an array
-            if (typeof parsedResponse.warnings === 'string') {
+       if (typeof parsedResponse.explanation_markdown !== 'string' || !parsedResponse.explanation_markdown.trim()) {
+        // If critical explanation is missing, throw error or provide fallback
+         throw new Error("Parsed response is missing a valid 'explanation_markdown' field.");
+      }
+      // Normalize warnings: ensure it's an array if present, otherwise default to empty array
+        if (parsedResponse.warnings && !Array.isArray(parsedResponse.warnings)) {
+            console.warn("Received non-array 'warnings' field, attempting normalization.");
+            if (typeof parsedResponse.warnings === 'string' && parsedResponse.warnings.trim()) {
                 parsedResponse.warnings = [parsedResponse.warnings];
             } else {
-                parsedResponse.warnings = []; // Fallback for other invalid types
+                // If it's something else invalid (like an object), default to empty
+                parsedResponse.warnings = [];
             }
+        } else if (!parsedResponse.warnings) {
+            parsedResponse.warnings = []; // Ensure warnings is always an array
         }
 
+      console.log("Successfully parsed JSON response:", parsedResponse);
 
+      // Return the validated and potentially normalized structure
       return {
-        explanation: parsedResponse.explanation,
-        warnings: parsedResponse.warnings || [], // Default to empty array if warnings is null/undefined
+        language: parsedResponse.language,
+        explanation_markdown: parsedResponse.explanation_markdown,
+        warnings: parsedResponse.warnings,
       };
+
     } catch (parseError) {
-      // If JSON parsing fails, it means the model didn't adhere to the requested format.
-      console.warn("Failed to parse GitHub Model API response as JSON. The model might not have followed the format instructions. Using raw content as explanation.", parseError, "Raw Content:", content);
-      // Fallback: return the raw content as the explanation and indicate no structured warnings.
+      console.error("Failed to parse GitHub Model API response as JSON.", parseError, "Raw Content:", content);
+      // Fallback: return the raw content as the explanation and add a specific warning.
       return {
-        explanation: content,
-        warnings: ["Warning: The AI response was not in the expected JSON format. Displaying raw output."],
+        language: "Unknown",
+        explanation_markdown: `### ⚠️ Error Parsing Response\nThe AI's response was not in the expected JSON format. Displaying raw output:\n\n---\n\n${content}`,
+        warnings: ["The AI response could not be parsed correctly. The structure might be broken."],
       };
     }
 
   } catch (error) {
-    // Catch network errors or errors thrown during processing.
     console.error("Error fetching or processing code explanation from GitHub Model API:", error);
-    // Re-throw a consistent error type.
     if (error instanceof Error) {
-        // Include specific details if available, otherwise provide a general message.
         throw new Error(`Failed to get code explanation: ${error.message}`);
     } else {
         throw new Error("An unknown error occurred while fetching the code explanation.");

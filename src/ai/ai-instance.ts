@@ -9,9 +9,9 @@ export const ai = genkit({
   plugins: [
     // Remove the googleAI plugin configuration
     // googleAI({
-    //   apiKey: process.env.GOOGLE_GENAI_API_KEY,
+    //   apiKey: process.env.GOOGLE_GENAI_API_KEY, // This line caused the error if the key wasn't set
     // }),
   ],
   // Remove the default model configuration
-  // model: 'googleai/gemini-2.0-flash',
+  // model: 'googleai/gemini-2.0-flash', // This also implies dependency on Google AI
 });

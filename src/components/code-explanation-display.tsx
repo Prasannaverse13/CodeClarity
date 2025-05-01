@@ -1,30 +1,35 @@
+
 'use client';
 
 import React from 'react';
+import ReactMarkdown from 'react-markdown'; // Import react-markdown
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Copy, AlertTriangle, Info } from 'lucide-react';
+import { Copy, AlertTriangle, Info, Brain, RefreshCw, BookOpen } from 'lucide-react'; // Added icons
 import { useToast } from "@/hooks/use-toast";
-import type { CodeExplanation } from '@/services/github'; // Updated import path
+import type { CodeExplanation } from '@/services/github'; // Still uses this type
+import { Badge } from '@/components/ui/badge'; // Import Badge
 
 interface CodeExplanationDisplayProps {
-  explanation: CodeExplanation | null;
+  explanationData: CodeExplanation | null; // Renamed prop
   isLoading: boolean;
   error: string | null;
+  onClear: () => void; // Add handler for clearing
 }
 
-export function CodeExplanationDisplay({ explanation, isLoading, error }: CodeExplanationDisplayProps) {
+export function CodeExplanationDisplay({ explanationData, isLoading, error, onClear }: CodeExplanationDisplayProps) {
   const { toast } = useToast();
 
   const handleCopy = () => {
-    if (explanation?.explanation) {
-      navigator.clipboard.writeText(explanation.explanation)
+    // Copy the markdown explanation
+    if (explanationData?.explanation_markdown) {
+      navigator.clipboard.writeText(explanationData.explanation_markdown)
         .then(() => {
           toast({
             title: "Copied!",
-            description: "Explanation copied to clipboard.",
+            description: "Explanation (Markdown) copied to clipboard.",
           });
         })
         .catch(err => {
@@ -38,13 +43,39 @@ export function CodeExplanationDisplay({ explanation, isLoading, error }: CodeEx
     }
   };
 
+   // Placeholder function for "Learn More"
+  const handleLearnMore = () => {
+    toast({
+      title: "Learn More",
+      description: "Educational content feature coming soon!",
+    });
+  };
+
+  // Placeholder function for "Explain Another"
+  const handleExplainAnother = () => {
+     toast({
+      title: "Explain Another",
+      description: "Functionality to explain another block or refine explanation coming soon!",
+    });
+     // Consider calling onClear() or similar to reset the state for new input
+     onClear(); // Example: Clear the view for a new explanation cycle
+  };
+
+
   const renderContent = () => {
+    // ⚙️ 2. Code Analysis in Steps (Loading State)
     if (isLoading) {
       return (
-        <div className="space-y-4">
-          <Skeleton className="h-6 w-3/4" />
+        <div className="space-y-4 p-4 border border-dashed border-muted rounded-md">
+           <div className="flex items-center space-x-2 text-muted-foreground">
+             <Brain className="h-5 w-5 animate-pulse" />
+             <span>AI Agent is thinking...</span>
+           </div>
+          <Skeleton className="h-6 w-1/4" /> {/* Language placeholder */}
+          <Skeleton className="h-5 w-3/4" /> {/* Header placeholder */}
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-5/6" />
+           <Skeleton className="h-5 w-2/4" /> {/* Summary placeholder */}
           <Skeleton className="h-4 w-full" />
         </div>
       );
@@ -54,37 +85,51 @@ export function CodeExplanationDisplay({ explanation, isLoading, error }: CodeEx
       return (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
+          <AlertTitle>Agent Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       );
     }
 
-    if (!explanation) {
+    if (!explanationData) {
       return (
-        <div className="text-muted-foreground text-center py-10">
-          <Info className="mx-auto h-10 w-10 mb-2" />
-          Enter some code on the left and click "Explain Code" to see the explanation here.
+        <div className="text-muted-foreground text-center py-10 border border-dashed border-muted rounded-md flex flex-col items-center justify-center h-full">
+          <Info className="mx-auto h-10 w-10 mb-4 text-primary" />
+          <p className="text-lg font-medium mb-2">Awaiting Analysis</p>
+          <p className="text-sm">Enter code on the left and click "Explain Code" <br/> to see the AI agent's analysis here.</p>
         </div>
       );
     }
 
+    // 📋 3. Readable Code Explanation & 4. Warnings
     return (
       <>
-        {explanation.warnings && explanation.warnings.length > 0 && (
-          <Alert variant="destructive" className="mb-4">
+        {/* Display Detected Language */}
+        {explanationData.language && explanationData.language !== "Unknown" && (
+          <div className="mb-4">
+            <Badge variant="secondary">Detected Language: {explanationData.language}</Badge>
+          </div>
+        )}
+
+         {/* ⚠️ 4. Agent Warnings & Suggestions */}
+        {explanationData.warnings && explanationData.warnings.length > 0 && (
+          <Alert variant="destructive" className="mb-6 shadow-sm">
              <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Warnings</AlertTitle>
+            <AlertTitle>Agent Warnings & Suggestions</AlertTitle>
             <AlertDescription>
-              <ul>
-                {explanation.warnings.map((warning, index) => (
-                  <li key={index} className="ml-4 list-disc">{warning}</li>
+              <ul className="list-disc pl-5 mt-2 space-y-1">
+                {explanationData.warnings.map((warning, index) => (
+                  <li key={index}>{warning}</li>
                 ))}
               </ul>
             </AlertDescription>
           </Alert>
         )}
-        <p className="whitespace-pre-wrap text-sm leading-relaxed">{explanation.explanation}</p>
+
+        {/* 📋 3. Readable Code Explanation (Rendered Markdown) */}
+        <div className="prose prose-sm dark:prose-invert max-w-none text-foreground prose-headings:text-foreground prose-strong:text-foreground prose-code:text-accent prose-a:text-primary">
+           <ReactMarkdown>{explanationData.explanation_markdown}</ReactMarkdown>
+        </div>
       </>
     );
   };
@@ -92,15 +137,25 @@ export function CodeExplanationDisplay({ explanation, isLoading, error }: CodeEx
   return (
     <div className="flex flex-col h-full">
       <ScrollArea className="flex-1 pr-4 mb-4">
-        <div className="prose prose-sm max-w-none text-foreground">
-           {renderContent()}
-        </div>
+         {renderContent()}
       </ScrollArea>
-      {explanation && !isLoading && !error && (
-         <Button onClick={handleCopy} variant="outline" size="sm" className="self-end mt-auto border-primary text-primary hover:bg-primary/10">
-          <Copy className="mr-2 h-4 w-4" />
-          Copy Explanation
-        </Button>
+
+       {/* Action Buttons */}
+      {explanationData && !isLoading && !error && (
+         <div className="flex flex-wrap gap-2 justify-end items-center mt-auto pt-4 border-t">
+            {/* 🧠 5. Knowledge Enhancer */}
+             <Button onClick={handleLearnMore} variant="ghost" size="sm" className="text-primary hover:bg-primary/10">
+                <BookOpen className="mr-2 h-4 w-4" /> Learn More
+             </Button>
+             {/* 🧮 6. Explain Another Block? */}
+              <Button onClick={handleExplainAnother} variant="outline" size="sm" className="text-foreground border-border hover:bg-accent/50">
+                <RefreshCw className="mr-2 h-4 w-4" /> Explain Another
+             </Button>
+             {/* Copy Button */}
+            <Button onClick={handleCopy} variant="outline" size="sm" className="border-primary text-primary hover:bg-primary/10">
+                <Copy className="mr-2 h-4 w-4" /> Copy Explanation
+            </Button>
+         </div>
       )}
     </div>
   );

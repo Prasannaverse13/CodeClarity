@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -14,11 +15,11 @@ body {
     --foreground: 0 0% 20%;
 
     /* Card styles aligned with background */
-    --card: 0 0% 96.1%;
+    --card: 0 0% 100%; /* Slightly whiter card for depth */
     --card-foreground: 0 0% 20%;
 
     /* Popover styles aligned with background */
-    --popover: 0 0% 96.1%;
+    --popover: 0 0% 100%;
     --popover-foreground: 0 0% 20%;
 
     /* Teal Primary/Accent (#008080) */
@@ -71,35 +72,35 @@ body {
   .dark {
     /* Dark Theme Inverted */
     /* Dark Gray Background (#333333) */
-    --background: 0 0% 20%;
+    --background: 0 0% 10%; /* Darker background */
     /* Light Gray Foreground (#F5F5F5) */
     --foreground: 0 0% 96.1%;
 
-    --card: 0 0% 20%;
+    --card: 0 0% 14%; /* Slightly lighter card */
     --card-foreground: 0 0% 96.1%;
 
-    --popover: 0 0% 20%;
+    --popover: 0 0% 14%;
     --popover-foreground: 0 0% 96.1%;
 
     /* Teal Primary/Accent */
     --primary: 180 100% 35%; /* Slightly lighter teal for dark mode */
     --primary-foreground: 0 0% 98%;
 
-    --secondary: 0 0% 14.9%;
+    --secondary: 0 0% 20%; /* Match original dark background */
     --secondary-foreground: 0 0% 98%;
 
-    --muted: 0 0% 14.9%;
+    --muted: 0 0% 20%;
     --muted-foreground: 0 0% 63.9%;
 
     /* Accent Teal */
     --accent: 180 100% 35%;
     --accent-foreground: 0 0% 98%;
 
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 72% 51%; /* Slightly brighter red */
     --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
+    --border: 0 0% 25%; /* Lighter border */
+    --input: 0 0% 20%;
     --ring: 180 100% 35%;
 
     --chart-1: 180 70% 50%;
@@ -126,5 +127,32 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+    /* Smooth scrolling */
+    scroll-behavior: smooth;
   }
+
+  /* Basic Markdown Styling */
+  .prose h3 { @apply text-lg font-semibold mt-4 mb-2 border-b pb-1; }
+  .prose ul { @apply list-disc pl-5 space-y-1 my-2; }
+  .prose p { @apply leading-relaxed my-2; }
+  .prose code { @apply bg-muted px-1 py-0.5 rounded text-sm font-mono text-accent-foreground; } /* Adjust code color if needed */
+  .prose pre { @apply bg-secondary p-3 rounded-md overflow-x-auto my-3; } /* Styling for code blocks */
+  .prose pre code { @apply bg-transparent p-0 text-secondary-foreground; } /* Reset inner code styling */
+  .prose strong { @apply font-semibold; }
+  .prose a { @apply text-primary hover:underline; }
 }
+
+@layer utilities {
+   /* Add custom animations if needed */
+   .animate-thinking {
+     /* Example simple pulse animation */
+     animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+   }
+
+   @keyframes pulse {
+     50% {
+       opacity: .5;
+     }
+   }
+}
+
