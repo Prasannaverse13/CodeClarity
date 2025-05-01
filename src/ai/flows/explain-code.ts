@@ -34,7 +34,7 @@ const ExplainCodeOutputSchema = z.object({
     description: z.string().describe('Description of the alternative approach.'),
     code: z.string().describe('Alternative code snippet.'),
   })).optional().describe('Alternative ways to write the same logic.'),
-  flowchart_mermaid: z.string().optional().describe('Mermaid syntax for a flowchart representing the code logic.'),
+  // flowchart_mermaid removed
 });
 export type ExplainCodeOutput = z.infer<typeof ExplainCodeOutputSchema>; // Matches the updated CodeExplanation interface
 

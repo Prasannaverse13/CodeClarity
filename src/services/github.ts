@@ -7,7 +7,7 @@ import ModelClient, { isUnexpected, type ChatRequestMessage } from "@azure-rest/
 import { AzureKeyCredential } from "@azure/core-auth";
 
 /**
- * Represents a comprehensive code analysis, including explanation, potential issues, suggestions, and flowchart.
+ * Represents a comprehensive code analysis, including explanation, potential issues, and suggestions.
  */
 export interface CodeExplanation {
   /** The detected programming language of the code snippet. Defaults to "Unknown". */
@@ -26,8 +26,7 @@ export interface CodeExplanation {
   bug_suggestions?: { bug: string; fix_suggestion: string }[];
   /** Alternative ways to write the same logic. */
   alternative_suggestions?: { description: string; code: string }[];
-  /** Mermaid syntax for a flowchart representing the code logic. */
-  flowchart_mermaid?: string;
+  // flowchart_mermaid removed
 }
 
 
@@ -85,7 +84,7 @@ Analyze the provided code snippet and return a detailed analysis.
 6.  **Check Security Vulnerabilities**: Look for common security flaws (e.g., injection, XSS, insecure handling).
 7.  **Suggest Bug Fixes**: Identify potential bugs and propose specific fixes.
 8.  **Propose Alternatives**: Suggest 1-2 alternative ways to write the same logic, explaining the trade-offs (e.g., efficiency, readability). Provide code snippets for alternatives.
-9.  **Generate Flowchart**: Create a Mermaid flowchart diagram (using 'graph TD' or 'graph LR') representing the code's logical flow. Keep it concise for simple snippets.
+9.  **DO NOT Generate Flowchart**: Flowchart generation is not required.
 
 **Output Format**: Structure your response STRICTLY as a JSON object:
 \`\`\`json
@@ -102,11 +101,10 @@ Analyze the provided code snippet and return a detailed analysis.
   "alternative_suggestions": [
     { "description": "Alternative 1 description", "code": "Alternative code snippet 1" },
     { "description": "Alternative 2 description", "code": "Alternative code snippet 2" }
-  ],
-  "flowchart_mermaid": "graph TD\\nA[Start] --> B{Decision};\\nB -->|Yes| C[Action 1];\\nB -->|No| D[Action 2];\\nC --> E[End];\\nD --> E;"
+  ]
 }
 \`\`\`
-- All fields except \`language\` and \`explanation_markdown\` are optional. If no items exist for an array field (e.g., warnings), provide an empty array \`[]\`. If no flowchart is suitable, omit \`flowchart_mermaid\` or provide an empty string.
+- All fields except \`language\` and \`explanation_markdown\` are optional. If no items exist for an array field (e.g., warnings), provide an empty array \`[]\`.
 - For \`bug_suggestions\`, each item MUST have both \`bug\` and \`fix_suggestion\`.
 - For \`alternative_suggestions\`, each item MUST have both \`description\` and \`code\`.
 - Ensure valid JSON, including proper escaping of newlines (\\n) and quotes within strings.
@@ -165,7 +163,7 @@ Analyze the provided code snippet and return a detailed analysis.
         alternative_suggestions: Array.isArray(parsedResponse.alternative_suggestions)
           ? parsedResponse.alternative_suggestions.filter(a => a && typeof a.description === 'string' && typeof a.code === 'string')
           : [],
-        flowchart_mermaid: typeof parsedResponse.flowchart_mermaid === 'string' ? parsedResponse.flowchart_mermaid.trim() : undefined,
+        // flowchart_mermaid removed
       };
 
        // Further validation: If explanation is missing/empty after parse, throw error
@@ -189,7 +187,7 @@ Analyze the provided code snippet and return a detailed analysis.
         security_vulnerabilities: [],
         bug_suggestions: [],
         alternative_suggestions: [],
-        flowchart_mermaid: undefined,
+        // flowchart_mermaid removed
       };
     }
 

@@ -3,25 +3,19 @@
 
 import React, { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import mermaid from 'mermaid'; // Import mermaid
+// import mermaid from 'mermaid'; // Removed mermaid import
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge'; // Import Badge
-import { Copy, AlertTriangle, Info, Brain, RefreshCw, BookOpen, Lightbulb, Bug, ShieldAlert, DraftingCompass, GitCompareArrows, Workflow, Terminal } from 'lucide-react'; // Added more icons
+import { Badge } from '@/components/ui/badge';
+import { Copy, AlertTriangle, Info, Brain, RefreshCw, BookOpen, Lightbulb, Bug, ShieldAlert, DraftingCompass, GitCompareArrows, Terminal } from 'lucide-react'; // Removed Workflow icon
 import { useToast } from "@/hooks/use-toast";
-import type { CodeExplanation } from '@/services/github'; // Uses the enhanced type
+import type { CodeExplanation } from '@/services/github';
 
-// Mermaid configuration (run once)
-mermaid.initialize({
-  startOnLoad: false, // We manually render
-  theme: 'neutral', // Or 'dark', 'forest', etc. based on your preference or theme
-  securityLevel: 'loose', // Required for dynamic rendering
-  // You can add more specific theme variables if needed
-});
+// Mermaid configuration removed
 
 interface CodeExplanationDisplayProps {
   explanationData: CodeExplanation | null;
@@ -32,31 +26,11 @@ interface CodeExplanationDisplayProps {
 
 export function CodeExplanationDisplay({ explanationData, isLoading, error, onClear }: CodeExplanationDisplayProps) {
   const { toast } = useToast();
-  const [isClient, setIsClient] = useState(false);
+  // const [isClient, setIsClient] = useState(false); // Removed isClient state
 
-  // Ensure Mermaid runs only on the client-side after mount
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
+  // Removed client-side mount effect
 
-  useEffect(() => {
-    if (isClient && explanationData?.flowchart_mermaid && !isLoading && !error) {
-      try {
-        const mermaidElement = document.getElementById('mermaid-flowchart');
-        if (mermaidElement) {
-          mermaid.render('mermaid-graph', explanationData.flowchart_mermaid, (svgCode) => {
-            mermaidElement.innerHTML = svgCode;
-          });
-        }
-      } catch (e) {
-        console.error("Mermaid rendering failed:", e);
-        const mermaidElement = document.getElementById('mermaid-flowchart');
-        if (mermaidElement) {
-            mermaidElement.innerHTML = `<p class="text-destructive">Error rendering flowchart.</p>`;
-        }
-      }
-    }
-  }, [explanationData?.flowchart_mermaid, isLoading, error, isClient]);
+  // Removed mermaid rendering effect
 
   const handleCopy = (textToCopy: string, type: string) => {
     if (textToCopy) {
@@ -78,12 +52,20 @@ export function CodeExplanationDisplay({ explanationData, isLoading, error, onCl
     }
   };
 
-  // Placeholder functions for future features
-  const handleLearnMore = () => { toast({ title: "Learn More", description: "Educational content feature coming soon!" }); };
+  // Enable Learn More button
+  const handleLearnMore = () => {
+     // Simple implementation: show a toast or alert
+     toast({
+       title: "Learn More",
+       description: "Feature under development. Educational content related to the code concepts will be shown here.",
+     });
+     // In a real implementation, this could:
+     // - Fetch relevant documentation/articles based on explanationData.language or concepts mentioned.
+     // - Open a modal/sidebar with educational content.
+     // - Link to external resources (e.g., MDN, language docs).
+   };
   const handleExplainAnother = () => { onClear(); toast({ title: "Explain Another", description: "Ready for new input!" }); };
-  const handleRefactor = () => { toast({ title: "Refactor", description: "Refactoring suggestions coming soon!" }); };
-  const handleSecurityAudit = () => { toast({ title: "Security Audit", description: "Detailed security audit feature coming soon!" }); };
-  const handleTestGen = () => { toast({ title: "Test Case Generation", description: "Test case generation feature coming soon!" }); };
+  // Removed placeholder functions for refactor, security, test gen as they weren't implemented
 
   const renderSection = (title: string, icon: React.ReactNode, data: string[] | undefined | null, renderItem: (item: any, index: number) => React.ReactNode) => {
     if (!data || data.length === 0) return null;
@@ -164,7 +146,7 @@ export function CodeExplanationDisplay({ explanationData, isLoading, error, onCl
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="prose prose-sm dark:prose-invert max-w-none text-foreground prose-headings:text-foreground prose-strong:text-foreground prose-code:text-accent prose-a:text-primary prose-pre:bg-secondary prose-pre:text-secondary-foreground">
+            <div className="prose prose-sm dark:prose-invert max-w-none text-foreground prose-headings:text-foreground prose-strong:text-foreground prose-code:text-accent-foreground dark:prose-code:text-accent-foreground prose-a:text-primary prose-pre:bg-secondary prose-pre:text-secondary-foreground">
               <ReactMarkdown>{explanationData.explanation_markdown}</ReactMarkdown>
             </div>
              <Button onClick={() => handleCopy(explanationData.explanation_markdown, "Explanation")} variant="ghost" size="sm" className="mt-2 text-xs text-muted-foreground hover:text-primary">
@@ -246,23 +228,8 @@ export function CodeExplanationDisplay({ explanationData, isLoading, error, onCl
              </AccordionItem>
           )}
 
-           {/* Flowchart */}
-           {isClient && explanationData.flowchart_mermaid && (
-             <AccordionItem value="flowchart">
-               <AccordionTrigger className="text-base font-semibold hover:no-underline">
-                 <div className="flex items-center gap-2">
-                   <Workflow className="h-4 w-4 text-green-600" /> Code Flowchart
-                 </div>
-               </AccordionTrigger>
-               <AccordionContent className="pt-2 pb-4 pl-2 pr-2 flex justify-center items-center">
-                 {/* Container for Mermaid */}
-                  <div id="mermaid-flowchart" className="mermaid w-full min-h-[100px] flex justify-center items-center">
-                     {/* Mermaid will render SVG here */}
-                     <Skeleton className="h-24 w-3/4" /> {/* Placeholder while rendering */}
-                 </div>
-               </AccordionContent>
-             </AccordionItem>
-           )}
+           {/* Flowchart section removed */}
+
         </Accordion>
 
       </div>
@@ -277,17 +244,13 @@ export function CodeExplanationDisplay({ explanationData, isLoading, error, onCl
 
        {/* Action Buttons */}
       <div className="flex flex-wrap gap-2 justify-end items-center mt-auto pt-4 border-t">
-           {/* Future Buttons - Keep placeholders or implement */}
+           {/* Enabled Learn More Button */}
             <Button onClick={handleLearnMore} variant="ghost" size="sm" className="text-primary hover:bg-primary/10">
                 <BookOpen className="mr-1.5 h-4 w-4" /> Learn More
             </Button>
             <Button onClick={handleExplainAnother} variant="outline" size="sm" className="text-foreground border-border hover:bg-accent/50">
                 <RefreshCw className="mr-1.5 h-4 w-4" /> Explain Another
             </Button>
-            {/* Add buttons for refactor, security, test gen if desired */}
-            {/* <Button onClick={handleRefactor} variant="ghost" size="sm" title="Suggest Refactoring (Coming Soon)" disabled><Wrench className="mr-1.5 h-4 w-4"/> Refactor</Button> */}
-            {/* <Button onClick={handleSecurityAudit} variant="ghost" size="sm" title="Perform Security Audit (Coming Soon)" disabled><Shield className="mr-1.5 h-4 w-4"/> Audit</Button> */}
-            {/* <Button onClick={handleTestGen} variant="ghost" size="sm" title="Generate Test Cases (Coming Soon)" disabled><TestTube className="mr-1.5 h-4 w-4"/> Tests</Button> */}
              {/* Copy Main Explanation Button */}
             <Button
                 onClick={() => handleCopy(explanationData?.explanation_markdown || '', "Explanation")}
@@ -301,4 +264,3 @@ export function CodeExplanationDisplay({ explanationData, isLoading, error, onCl
     </div>
   );
 }
-

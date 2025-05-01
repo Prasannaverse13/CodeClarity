@@ -11,16 +11,16 @@ body {
   :root {
     /* Light Gray Background (#F5F5F5) */
     --background: 0 0% 96.1%;
-    /* Dark Gray Foreground (#333333) */
-    --foreground: 0 0% 20%;
+    /* Darker Gray Foreground for better contrast */
+    --foreground: 0 0% 15%; /* Changed from 20% */
 
     /* Card styles aligned with background */
     --card: 0 0% 100%; /* Slightly whiter card for depth */
-    --card-foreground: 0 0% 20%;
+    --card-foreground: 0 0% 15%; /* Match foreground */
 
     /* Popover styles aligned with background */
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 20%;
+    --popover-foreground: 0 0% 15%; /* Match foreground */
 
     /* Teal Primary/Accent (#008080) */
     --primary: 180 100% 25.1%;
@@ -60,7 +60,7 @@ body {
 
     /* Sidebar theme (using main theme for simplicity) */
     --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-foreground: 0 0% 15%; /* Match foreground */
     --sidebar-primary: 180 100% 25.1%;
     --sidebar-primary-foreground: 180 100% 95%;
     --sidebar-accent: 0 0% 90%;
@@ -135,7 +135,8 @@ body {
   .prose h3 { @apply text-lg font-semibold mt-4 mb-2 border-b pb-1; }
   .prose ul { @apply list-disc pl-5 space-y-1 my-2; }
   .prose p { @apply leading-relaxed my-2; }
-  .prose code { @apply bg-muted px-1 py-0.5 rounded text-sm font-mono text-accent-foreground; } /* Adjust code color if needed */
+  /* Use a slightly darker background for inline code in light mode for better contrast */
+  .prose code { @apply bg-muted/70 px-1 py-0.5 rounded text-sm font-mono text-accent-foreground dark:bg-muted dark:text-accent-foreground; }
   .prose pre { @apply bg-secondary p-3 rounded-md overflow-x-auto my-3; } /* Styling for code blocks */
   .prose pre code { @apply bg-transparent p-0 text-secondary-foreground; } /* Reset inner code styling */
   .prose strong { @apply font-semibold; }
