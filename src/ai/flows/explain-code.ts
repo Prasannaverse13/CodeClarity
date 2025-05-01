@@ -3,22 +3,30 @@
 
 /**
  * @fileOverview AI Agent Flow for explaining code using the GitHub Copilot service.
+ * This file defines the Genkit flow that orchestrates the code explanation process.
+ * It takes code input, calls the underlying service (`getCodeExplanation`), and returns
+ * the structured analysis.
  *
- * - explainCode - A function that handles the code explanation process.
- * - ExplainCodeInput - The input type for the explainCode function.
- * - ExplainCodeOutput - The return type for the explainCode function.
+ * - explainCode - The primary exported function called by the UI to initiate the flow.
+ * - ExplainCodeInput - The Zod schema and TypeScript type for the flow's input.
+ * - ExplainCodeOutput - The Zod schema and TypeScript type for the flow's output.
+ * - explainCodeFlow - The internal Genkit flow definition.
  */
 
 import { ai } from '@/ai/ai-instance';
 import { z } from 'genkit';
+// Import the service function and its return type
 import { getCodeExplanation, type CodeExplanation } from '@/services/github';
 
+// Define the input schema using Zod
 const ExplainCodeInputSchema = z.object({
   codeSnippet: z.string().describe('The code snippet to explain.'),
 });
+// Define the TypeScript type based on the Zod schema
 export type ExplainCodeInput = z.infer<typeof ExplainCodeInputSchema>;
 
-// Updated Output schema to match the enhanced CodeExplanation interface from github service
+// Define the output schema using Zod, matching the CodeExplanation interface
+// This ensures the flow's output structure is validated.
 const ExplainCodeOutputSchema = z.object({
   language: z.string().describe('The detected programming language. Defaults to "Unknown".'),
   explanation_markdown: z.string().describe('The detailed explanation of the code, formatted in markdown.'),
@@ -34,45 +42,50 @@ const ExplainCodeOutputSchema = z.object({
     description: z.string().describe('Description of the alternative approach.'),
     code: z.string().describe('Alternative code snippet.'),
   })).optional().describe('Alternative ways to write the same logic.'),
-  // flowchart_mermaid removed
 });
-export type ExplainCodeOutput = z.infer<typeof ExplainCodeOutputSchema>; // Matches the updated CodeExplanation interface
+// Define the TypeScript type based on the Zod schema
+export type ExplainCodeOutput = z.infer<typeof ExplainCodeOutputSchema>;
 
 /**
  * Takes a code snippet and returns a comprehensive analysis using the configured GitHub Copilot service.
- * This acts as the primary entry point for the code explanation feature.
- * @param input - Object containing the codeSnippet.
- * @returns A promise resolving to the CodeExplanation object containing the full analysis.
+ * This acts as the primary entry point called by the frontend components to trigger the code explanation feature.
+ * It simply wraps the call to the Genkit flow.
+ *
+ * @param input - Object containing the codeSnippet. Conforms to ExplainCodeInput.
+ * @returns A promise resolving to the CodeExplanation object containing the full analysis. Conforms to ExplainCodeOutput.
  */
 export async function explainCode(input: ExplainCodeInput): Promise<ExplainCodeOutput> {
-  // Directly call the flow which uses the getCodeExplanation service.
+  // Directly call the defined Genkit flow.
   return explainCodeFlow(input);
 }
 
-// Define the Genkit flow
+// Define the Genkit flow using ai.defineFlow
+// This specifies the flow's name, input/output schemas, and the core async function.
 const explainCodeFlow = ai.defineFlow<
   typeof ExplainCodeInputSchema,
-  typeof ExplainCodeOutputSchema // Use the updated output schema
+  typeof ExplainCodeOutputSchema // Use the defined output schema
 >(
   {
-    name: 'explainCodeFlow',
-    inputSchema: ExplainCodeInputSchema,
-    outputSchema: ExplainCodeOutputSchema, // Use the updated output schema
+    name: 'explainCodeFlow', // Name for identification in Genkit UI/logs
+    inputSchema: ExplainCodeInputSchema, // Link the input schema
+    outputSchema: ExplainCodeOutputSchema, // Link the output schema
   },
-  async (input): Promise<CodeExplanation> => { // Return type matches the service's output
+  async (input): Promise<CodeExplanation> => { // The core logic of the flow
     try {
-      // The core logic is encapsulated within the getCodeExplanation service.
+      // The main work is delegated to the getCodeExplanation service,
+      // which handles the actual API call to the GitHub model.
       const result: CodeExplanation = await getCodeExplanation(input.codeSnippet);
-      // The result from the service already matches the desired output structure.
+      // The result from the service already matches the desired output structure (CodeExplanation).
       return result;
     } catch (error) {
+      // Log detailed error information on the server-side
       console.error(`Error in explainCodeFlow for snippet: "${input.codeSnippet.substring(0, 50)}..."`, error);
-      // Re-throw the error to be handled by the caller (e.g., the UI component)
+      // Re-throw the error so it can be caught by the calling component (UI)
+      // and displayed to the user. Add context to the error message.
        if (error instanceof Error) {
-           throw new Error(`Failed to explain code: ${error.message}`);
+           throw new Error(`AI Agent Error: ${error.message}`); // Prepend context
        }
-       throw new Error("An unexpected error occurred during code explanation.");
+       throw new Error("An unexpected error occurred within the AI Agent flow.");
     }
   }
 );
-
