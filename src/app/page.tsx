@@ -20,7 +20,8 @@ export default function Home() {
 
   useEffect(() => {
     // Simulate fetching/setting a view count only on the client-side
-    // Replace with actual logic if available, otherwise use a placeholder or static number
+    // A true live counter requires backend infrastructure (WebSockets, etc.)
+    // This is a placeholder to prevent hydration errors.
     const simulatedCount = Math.floor(Math.random() * 150) + 10; // Example random count
     setViewCount(simulatedCount);
   }, []); // Empty dependency array ensures this runs once on mount
@@ -58,21 +59,24 @@ export default function Home() {
         {/* Right-aligned section for GitHub link and view counter */}
         <div className="absolute top-4 right-4 flex items-center gap-4">
           {/* View Counter */}
-          <div className="flex items-center gap-1 text-sm text-muted-foreground" title="Simulated live views">
+          <div className="flex items-center gap-1 text-sm text-muted-foreground" title="Simulated live views (client-side)">
             <Eye className="h-4 w-4" />
             <span>{viewCount} watching</span>
           </div>
           {/* GitHub Link */}
-          <a
-             href="https://github.com/Prasannaverse13"
-             target="_blank"
-             rel="noopener noreferrer"
-             className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors"
-             title="Developed by Prasannaverse13"
-           >
-            <Github className="h-5 w-5" /> {/* Slightly larger icon */}
-            {/* Optional: <span className="hidden sm:inline">Prasannaverse13</span> */}
-          </a>
+           <div className="flex items-center gap-1 text-sm text-muted-foreground">
+             <span>Developed by</span>
+              <a
+                 href="https://github.com/Prasannaverse13"
+                 target="_blank"
+                 rel="noopener noreferrer"
+                 className="flex items-center gap-1 hover:text-primary transition-colors"
+                 title="Visit Prasannaverse13's GitHub profile"
+               >
+                <Github className="h-5 w-5" />
+                <span className="hidden sm:inline font-medium">Prasannaverse13</span>
+              </a>
+           </div>
         </div>
       </header>
       <main className="flex flex-1 overflow-hidden">
