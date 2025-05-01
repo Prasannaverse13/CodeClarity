@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview Service to interact with the GitHub Copilot model via Azure AI Inference SDK using a GitHub PAT.
  */
@@ -6,22 +7,29 @@ import ModelClient, { isUnexpected, type ChatRequestMessage } from "@azure-rest/
 import { AzureKeyCredential } from "@azure/core-auth";
 
 /**
- * Represents a code explanation, including the explanation, potential warnings, and detected language.
+ * Represents a comprehensive code analysis, including explanation, potential issues, suggestions, and flowchart.
  */
 export interface CodeExplanation {
-  /**
-   * The detected programming language of the code snippet.
-   */
-  language?: string;
-  /**
-   * The explanation of the code, formatted in markdown.
-   */
+  /** The detected programming language of the code snippet. Defaults to "Unknown". */
+  language: string;
+  /** The detailed explanation of the code, formatted in markdown. */
   explanation_markdown: string;
-  /**
-   * Any warnings associated with the code. Can be undefined or an empty array.
-   */
+  /** Potential warnings or general suggestions related to the code. */
   warnings?: string[];
+  /** Suggestions for improving code style and formatting. */
+  style_suggestions?: string[];
+  /** Identified code smells indicating potential design problems. */
+  code_smells?: string[];
+  /** Detected potential security vulnerabilities. */
+  security_vulnerabilities?: string[];
+  /** Identified potential bugs and suggested fixes. */
+  bug_suggestions?: { bug: string; fix_suggestion: string }[];
+  /** Alternative ways to write the same logic. */
+  alternative_suggestions?: { description: string; code: string }[];
+  /** Mermaid syntax for a flowchart representing the code logic. */
+  flowchart_mermaid?: string;
 }
+
 
 // Load the GitHub Personal Access Token from environment variables.
 const githubToken = process.env.GITHUB_TOKEN;
@@ -41,9 +49,9 @@ const client = ModelClient(
 );
 
 /**
- * Asynchronously retrieves a code explanation from the GitHub model API, formatted for the AI Agent.
+ * Asynchronously retrieves a comprehensive code analysis from the GitHub model API.
  *
- * @param codeSnippet The code snippet to explain.
+ * @param codeSnippet The code snippet to analyze.
  * @returns A promise that resolves to a CodeExplanation object.
  * @throws Throws an error if the GITHUB_TOKEN is not configured, the API call fails,
  *         returns an unexpected response, or the response content is empty/invalid.
@@ -57,36 +65,54 @@ export async function getCodeExplanation(codeSnippet: string): Promise<CodeExpla
   const messages: ChatRequestMessage[] = [
     {
       role: "system",
-      content: `You are an expert software developer acting as a code reviewer and explainer AI agent.
-Your task is to analyze the provided code snippet and return a comprehensive analysis.
+      content: `You are an expert software developer AI agent providing comprehensive code analysis.
+Analyze the provided code snippet and return a detailed analysis.
+
+**Analysis Tasks:**
 
 1.  **Detect Language**: Identify the programming language.
-2.  **Explain Code**: Provide a clear, step-by-step explanation using markdown. Follow this structure:
+2.  **Explain Code**: Provide a clear, step-by-step explanation using markdown. Structure:
     ### 🔍 What this code does:
-    - Describe the primary function or purpose.
-    - Detail inputs and outputs.
-    - Explain key internal steps/logic. Use bullet points for clarity.
-    - Mention conditions (if/else).
-
+    - Primary function/purpose.
+    - Inputs and outputs.
+    - Key internal steps/logic (use bullet points).
+    - Conditions (if/else).
     ### 💡 Summary:
-    - Provide a concise summary of the code's main purpose.
-3.  **Identify Warnings/Suggestions**: List potential issues, risks (like security vulnerabilities, infinite loops, missing validation), or areas for improvement (like renaming variables, refactoring opportunities).
+    - Concise summary of the code's main purpose.
+3.  **Identify Warnings/General Suggestions**: List potential issues or general improvement tips.
+4.  **Suggest Style/Formatting Improvements**: Based on common conventions for the detected language.
+5.  **Detect Code Smells**: Identify code patterns that might indicate deeper design problems.
+6.  **Check Security Vulnerabilities**: Look for common security flaws (e.g., injection, XSS, insecure handling).
+7.  **Suggest Bug Fixes**: Identify potential bugs and propose specific fixes.
+8.  **Propose Alternatives**: Suggest 1-2 alternative ways to write the same logic, explaining the trade-offs (e.g., efficiency, readability). Provide code snippets for alternatives.
+9.  **Generate Flowchart**: Create a Mermaid flowchart diagram (using 'graph TD' or 'graph LR') representing the code's logical flow. Keep it concise for simple snippets.
 
 **Output Format**: Structure your response STRICTLY as a JSON object:
 \`\`\`json
 {
-  "language": "Detected language (e.g., Python, JavaScript)",
+  "language": "Detected language (e.g., Python, JavaScript) or Unknown",
   "explanation_markdown": "### 🔍 What this code does:\\n- Point 1\\n- Point 2\\n\\n### 💡 Summary:\\nSummary text.\\n",
-  "warnings": ["Optional warning/suggestion 1", "Optional warning/suggestion 2"]
+  "warnings": ["Optional warning/suggestion 1", "Optional warning/suggestion 2"],
+  "style_suggestions": ["Optional style suggestion 1"],
+  "code_smells": ["Optional code smell 1"],
+  "security_vulnerabilities": ["Optional security vulnerability 1"],
+  "bug_suggestions": [
+    { "bug": "Potential bug description", "fix_suggestion": "How to fix it" }
+  ],
+  "alternative_suggestions": [
+    { "description": "Alternative 1 description", "code": "Alternative code snippet 1" },
+    { "description": "Alternative 2 description", "code": "Alternative code snippet 2" }
+  ],
+  "flowchart_mermaid": "graph TD\\nA[Start] --> B{Decision};\\nB -->|Yes| C[Action 1];\\nB -->|No| D[Action 2];\\nC --> E[End];\\nD --> E;"
 }
 \`\`\`
-- 'language' field is mandatory.
-- 'explanation_markdown' field is mandatory and must contain the structured markdown explanation.
-- 'warnings' field is optional. If present, it MUST be an array of strings. If none, provide an empty array [] or omit the field.
-- Ensure the markdown uses newline characters (\\n) appropriately within the JSON string.
+- All fields except \`language\` and \`explanation_markdown\` are optional. If no items exist for an array field (e.g., warnings), provide an empty array \`[]\`. If no flowchart is suitable, omit \`flowchart_mermaid\` or provide an empty string.
+- For \`bug_suggestions\`, each item MUST have both \`bug\` and \`fix_suggestion\`.
+- For \`alternative_suggestions\`, each item MUST have both \`description\` and \`code\`.
+- Ensure valid JSON, including proper escaping of newlines (\\n) and quotes within strings.
 - Do NOT include any text outside this JSON structure.`,
     },
-    { role: "user", content: `Explain the following code snippet:\n\n\`\`\`\n${codeSnippet}\n\`\`\`` },
+    { role: "user", content: `Analyze the following code snippet:\n\n\`\`\`\n${codeSnippet}\n\`\`\`` },
   ];
 
   try {
@@ -95,8 +121,8 @@ Your task is to analyze the provided code snippet and return a comprehensive ana
       body: {
         messages: messages,
         model: "openai/gpt-4o", // Specify the desired model
-        temperature: 0.3,        // Lower temperature for more focused, structured output
-        max_tokens: 1500,       // Adjust as needed
+        temperature: 0.4,        // Slightly increased for more diverse suggestions but still focused
+        max_tokens: 2048,       // Increased token limit for potentially longer analysis
         top_p: 1,
         // response_format: { type: "json_object" } // Keep commented out unless confirmed reliable
       },
@@ -122,38 +148,33 @@ Your task is to analyze the provided code snippet and return a comprehensive ana
     try {
       // Clean potential markdown code block fences if the model wraps the JSON
       const cleanedContent = content.replace(/^```json\s*|```$/g, '').trim();
-      const parsedResponse = JSON.parse(cleanedContent) as Partial<CodeExplanation>; // Use Partial for initial parsing
+      // Attempt to parse the cleaned content as JSON
+      const parsedResponse = JSON.parse(cleanedContent) as Partial<CodeExplanation>;
 
-      // --- Validation ---
-      if (typeof parsedResponse.language !== 'string' || !parsedResponse.language.trim()) {
-          console.warn("Parsed response is missing a valid 'language' field or it's empty. Setting to 'Unknown'.");
-          parsedResponse.language = 'Unknown';
-      }
-       if (typeof parsedResponse.explanation_markdown !== 'string' || !parsedResponse.explanation_markdown.trim()) {
-        // If critical explanation is missing, throw error or provide fallback
-         throw new Error("Parsed response is missing a valid 'explanation_markdown' field.");
-      }
-      // Normalize warnings: ensure it's an array if present, otherwise default to empty array
-        if (parsedResponse.warnings && !Array.isArray(parsedResponse.warnings)) {
-            console.warn("Received non-array 'warnings' field, attempting normalization.");
-            if (typeof parsedResponse.warnings === 'string' && parsedResponse.warnings.trim()) {
-                parsedResponse.warnings = [parsedResponse.warnings];
-            } else {
-                // If it's something else invalid (like an object), default to empty
-                parsedResponse.warnings = [];
-            }
-        } else if (!parsedResponse.warnings) {
-            parsedResponse.warnings = []; // Ensure warnings is always an array
-        }
-
-      console.log("Successfully parsed JSON response:", parsedResponse);
-
-      // Return the validated and potentially normalized structure
-      return {
-        language: parsedResponse.language,
-        explanation_markdown: parsedResponse.explanation_markdown,
-        warnings: parsedResponse.warnings,
+      // --- Validation and Normalization ---
+      const validatedResponse: CodeExplanation = {
+        language: typeof parsedResponse.language === 'string' && parsedResponse.language.trim() ? parsedResponse.language : "Unknown",
+        explanation_markdown: typeof parsedResponse.explanation_markdown === 'string' && parsedResponse.explanation_markdown.trim() ? parsedResponse.explanation_markdown : "### Error\nCould not extract explanation.",
+        warnings: Array.isArray(parsedResponse.warnings) ? parsedResponse.warnings.filter(w => typeof w === 'string') : [],
+        style_suggestions: Array.isArray(parsedResponse.style_suggestions) ? parsedResponse.style_suggestions.filter(s => typeof s === 'string') : [],
+        code_smells: Array.isArray(parsedResponse.code_smells) ? parsedResponse.code_smells.filter(s => typeof s === 'string') : [],
+        security_vulnerabilities: Array.isArray(parsedResponse.security_vulnerabilities) ? parsedResponse.security_vulnerabilities.filter(v => typeof v === 'string') : [],
+        bug_suggestions: Array.isArray(parsedResponse.bug_suggestions)
+          ? parsedResponse.bug_suggestions.filter(b => b && typeof b.bug === 'string' && typeof b.fix_suggestion === 'string')
+          : [],
+        alternative_suggestions: Array.isArray(parsedResponse.alternative_suggestions)
+          ? parsedResponse.alternative_suggestions.filter(a => a && typeof a.description === 'string' && typeof a.code === 'string')
+          : [],
+        flowchart_mermaid: typeof parsedResponse.flowchart_mermaid === 'string' ? parsedResponse.flowchart_mermaid.trim() : undefined,
       };
+
+       // Further validation: If explanation is missing/empty after parse, throw error
+      if (!validatedResponse.explanation_markdown || validatedResponse.explanation_markdown === "### Error\nCould not extract explanation.") {
+           throw new Error("Parsed response is missing a valid 'explanation_markdown' field.");
+      }
+
+      console.log("Successfully parsed and validated JSON response:", validatedResponse);
+      return validatedResponse;
 
     } catch (parseError) {
       console.error("Failed to parse GitHub Model API response as JSON.", parseError, "Raw Content:", content);
@@ -162,6 +183,13 @@ Your task is to analyze the provided code snippet and return a comprehensive ana
         language: "Unknown",
         explanation_markdown: `### ⚠️ Error Parsing Response\nThe AI's response was not in the expected JSON format. Displaying raw output:\n\n---\n\n${content}`,
         warnings: ["The AI response could not be parsed correctly. The structure might be broken."],
+        // Initialize other fields as empty arrays/undefined for consistency
+        style_suggestions: [],
+        code_smells: [],
+        security_vulnerabilities: [],
+        bug_suggestions: [],
+        alternative_suggestions: [],
+        flowchart_mermaid: undefined,
       };
     }
 

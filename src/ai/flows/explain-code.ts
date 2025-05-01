@@ -18,19 +18,31 @@ const ExplainCodeInputSchema = z.object({
 });
 export type ExplainCodeInput = z.infer<typeof ExplainCodeInputSchema>;
 
-// Updated Output schema to include language and markdown explanation
+// Updated Output schema to match the enhanced CodeExplanation interface from github service
 const ExplainCodeOutputSchema = z.object({
-  language: z.string().optional().describe('The detected programming language.'),
-  explanation_markdown: z.string().describe('The explanation of the code, formatted in markdown.'),
-  warnings: z.array(z.string()).optional().describe('Any warnings or suggestions associated with the code.'),
+  language: z.string().describe('The detected programming language. Defaults to "Unknown".'),
+  explanation_markdown: z.string().describe('The detailed explanation of the code, formatted in markdown.'),
+  warnings: z.array(z.string()).optional().describe('Potential warnings or general suggestions.'),
+  style_suggestions: z.array(z.string()).optional().describe('Suggestions for improving code style and formatting.'),
+  code_smells: z.array(z.string()).optional().describe('Identified code smells indicating potential design problems.'),
+  security_vulnerabilities: z.array(z.string()).optional().describe('Detected potential security vulnerabilities.'),
+  bug_suggestions: z.array(z.object({
+    bug: z.string().describe('Potential bug description.'),
+    fix_suggestion: z.string().describe('How to fix the bug.'),
+  })).optional().describe('Identified potential bugs and suggested fixes.'),
+  alternative_suggestions: z.array(z.object({
+    description: z.string().describe('Description of the alternative approach.'),
+    code: z.string().describe('Alternative code snippet.'),
+  })).optional().describe('Alternative ways to write the same logic.'),
+  flowchart_mermaid: z.string().optional().describe('Mermaid syntax for a flowchart representing the code logic.'),
 });
 export type ExplainCodeOutput = z.infer<typeof ExplainCodeOutputSchema>; // Matches the updated CodeExplanation interface
 
 /**
- * Takes a code snippet and returns an explanation using the configured GitHub Copilot service.
+ * Takes a code snippet and returns a comprehensive analysis using the configured GitHub Copilot service.
  * This acts as the primary entry point for the code explanation feature.
  * @param input - Object containing the codeSnippet.
- * @returns A promise resolving to the CodeExplanation (explanation, language, and optional warnings).
+ * @returns A promise resolving to the CodeExplanation object containing the full analysis.
  */
 export async function explainCode(input: ExplainCodeInput): Promise<ExplainCodeOutput> {
   // Directly call the flow which uses the getCodeExplanation service.
@@ -49,8 +61,9 @@ const explainCodeFlow = ai.defineFlow<
   },
   async (input): Promise<CodeExplanation> => { // Return type matches the service's output
     try {
-      // The core logic is now encapsulated within the getCodeExplanation service.
+      // The core logic is encapsulated within the getCodeExplanation service.
       const result: CodeExplanation = await getCodeExplanation(input.codeSnippet);
+      // The result from the service already matches the desired output structure.
       return result;
     } catch (error) {
       console.error(`Error in explainCodeFlow for snippet: "${input.codeSnippet.substring(0, 50)}..."`, error);

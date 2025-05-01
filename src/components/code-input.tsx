@@ -6,11 +6,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Loader2, Send, Trash2 } from 'lucide-react'; // Added Trash2
 import { explainCode } from '@/ai/flows/explain-code';
-import type { CodeExplanation } from '@/services/github'; // Keep using this type
+import type { CodeExplanation } from '@/services/github'; // Use the enhanced type
 import { useToast } from "@/hooks/use-toast";
 
 interface CodeInputProps {
-  // Renamed for clarity, now includes status updates
+  // Uses the enhanced CodeExplanation type
   onExplanationUpdate: (
     explanation: CodeExplanation | null,
     isLoading: boolean,
@@ -36,30 +36,31 @@ export function CodeInput({ onExplanationUpdate }: CodeInputProps) {
 
     setIsLoading(true);
     // 🧭 1. Intent Confirmation & Context Detection (Initial Status)
-    onExplanationUpdate(null, true, null, "Got it! Analyzing your code to understand what it does...");
+    onExplanationUpdate(null, true, null, "Received! Analyzing your code...");
 
     try {
       // ⚙️ 2. Code Analysis in Steps (Simulated via API call)
-      // The actual step-by-step is handled by the backend/service.
-      // We can update status before the call if needed, but the main wait is here.
-      onExplanationUpdate(null, true, null, "Processing request with AI model...");
+      onExplanationUpdate(null, true, null, "Processing request with AI model... This may take a moment.");
 
       const result = await explainCode({ codeSnippet: code });
 
       // Success: Update with result and final status
-      const detectedLang = result.language ? `Detected language: ${result.language}. ` : '';
+      const detectedLang = result.language && result.language !== "Unknown"
+        ? `Detected language: ${result.language}. `
+        : '';
       onExplanationUpdate(result, false, null, `${detectedLang}Analysis complete.`); // Send successful result and status
     } catch (error) {
       console.error('Error explaining code:', error);
       const errorMsg = error instanceof Error ? error.message : 'An unexpected error occurred.';
-      onExplanationUpdate(null, false, errorMsg, "Agent encountered an error."); // Send error message and status
+      onExplanationUpdate(null, false, errorMsg, "Agent encountered an error during analysis."); // Send error message and status
        toast({
-        title: "Error",
+        title: "Analysis Error",
         description: `Failed to get explanation: ${errorMsg}`,
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      // Keep isLoading false after completion or error
+      // No need to set isLoading here as the parent state will update
     }
   };
 
@@ -69,7 +70,7 @@ export function CodeInput({ onExplanationUpdate }: CodeInputProps) {
     onExplanationUpdate(null, false, null, null);
      toast({
       title: "Cleared",
-      description: "Input and explanation cleared.",
+      description: "Input and analysis cleared.",
     });
   };
 

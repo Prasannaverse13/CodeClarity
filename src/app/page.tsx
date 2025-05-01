@@ -6,19 +6,19 @@ import { CodeInput } from '@/components/code-input';
 import { CodeExplanationDisplay } from '@/components/code-explanation-display';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import type { CodeExplanation } from '@/services/github'; // Updated import path
+import type { CodeExplanation } from '@/services/github'; // Use the enhanced type
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Info } from 'lucide-react';
 
 export default function Home() {
-  // State now holds the full CodeExplanation object
+  // State now holds the enhanced CodeExplanation object
   const [explanationData, setExplanationData] = useState<CodeExplanation | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [agentStatus, setAgentStatus] = useState<string | null>(null); // For agent messages
 
   const handleExplanationUpdate = (
-    data: CodeExplanation | null,
+    data: CodeExplanation | null, // Expects the enhanced type
     loading: boolean,
     errorMsg: string | null,
     status: string | null // Receive agent status updates
@@ -68,9 +68,9 @@ export default function Home() {
 
               {/* Agent Status Area */}
               {agentStatus && !isLoading && !error && (
-                 <Alert variant="default" className="mb-4 bg-accent/20 border-accent">
+                 <Alert variant="default" className="mb-4 bg-accent/10 border-accent/50">
                    <Info className="h-4 w-4 text-accent" />
-                   <AlertTitle className="text-accent">Agent Status</AlertTitle>
+                   <AlertTitle className="text-accent font-semibold">Agent Status</AlertTitle>
                    <AlertDescription>{agentStatus}</AlertDescription>
                  </Alert>
               )}
@@ -90,4 +90,3 @@ export default function Home() {
     </div>
   );
 }
-

@@ -1,82 +1,125 @@
 
 'use client';
 
-import React from 'react';
-import ReactMarkdown from 'react-markdown'; // Import react-markdown
+import React, { useEffect, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import mermaid from 'mermaid'; // Import mermaid
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Copy, AlertTriangle, Info, Brain, RefreshCw, BookOpen } from 'lucide-react'; // Added icons
-import { useToast } from "@/hooks/use-toast";
-import type { CodeExplanation } from '@/services/github'; // Still uses this type
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge'; // Import Badge
+import { Copy, AlertTriangle, Info, Brain, RefreshCw, BookOpen, Lightbulb, Bug, ShieldAlert, DraftingCompass, GitCompareArrows, Workflow, Terminal } from 'lucide-react'; // Added more icons
+import { useToast } from "@/hooks/use-toast";
+import type { CodeExplanation } from '@/services/github'; // Uses the enhanced type
+
+// Mermaid configuration (run once)
+mermaid.initialize({
+  startOnLoad: false, // We manually render
+  theme: 'neutral', // Or 'dark', 'forest', etc. based on your preference or theme
+  securityLevel: 'loose', // Required for dynamic rendering
+  // You can add more specific theme variables if needed
+});
 
 interface CodeExplanationDisplayProps {
-  explanationData: CodeExplanation | null; // Renamed prop
+  explanationData: CodeExplanation | null;
   isLoading: boolean;
   error: string | null;
-  onClear: () => void; // Add handler for clearing
+  onClear: () => void;
 }
 
 export function CodeExplanationDisplay({ explanationData, isLoading, error, onClear }: CodeExplanationDisplayProps) {
   const { toast } = useToast();
+  const [isClient, setIsClient] = useState(false);
 
-  const handleCopy = () => {
-    // Copy the markdown explanation
-    if (explanationData?.explanation_markdown) {
-      navigator.clipboard.writeText(explanationData.explanation_markdown)
+  // Ensure Mermaid runs only on the client-side after mount
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (isClient && explanationData?.flowchart_mermaid && !isLoading && !error) {
+      try {
+        const mermaidElement = document.getElementById('mermaid-flowchart');
+        if (mermaidElement) {
+          mermaid.render('mermaid-graph', explanationData.flowchart_mermaid, (svgCode) => {
+            mermaidElement.innerHTML = svgCode;
+          });
+        }
+      } catch (e) {
+        console.error("Mermaid rendering failed:", e);
+        const mermaidElement = document.getElementById('mermaid-flowchart');
+        if (mermaidElement) {
+            mermaidElement.innerHTML = `<p class="text-destructive">Error rendering flowchart.</p>`;
+        }
+      }
+    }
+  }, [explanationData?.flowchart_mermaid, isLoading, error, isClient]);
+
+  const handleCopy = (textToCopy: string, type: string) => {
+    if (textToCopy) {
+      navigator.clipboard.writeText(textToCopy)
         .then(() => {
           toast({
             title: "Copied!",
-            description: "Explanation (Markdown) copied to clipboard.",
+            description: `${type} copied to clipboard.`,
           });
         })
         .catch(err => {
-          console.error('Failed to copy text: ', err);
+          console.error(`Failed to copy ${type}: `, err);
           toast({
             title: "Error",
-            description: "Failed to copy explanation.",
+            description: `Failed to copy ${type}.`,
             variant: "destructive",
           });
         });
     }
   };
 
-   // Placeholder function for "Learn More"
-  const handleLearnMore = () => {
-    toast({
-      title: "Learn More",
-      description: "Educational content feature coming soon!",
-    });
-  };
+  // Placeholder functions for future features
+  const handleLearnMore = () => { toast({ title: "Learn More", description: "Educational content feature coming soon!" }); };
+  const handleExplainAnother = () => { onClear(); toast({ title: "Explain Another", description: "Ready for new input!" }); };
+  const handleRefactor = () => { toast({ title: "Refactor", description: "Refactoring suggestions coming soon!" }); };
+  const handleSecurityAudit = () => { toast({ title: "Security Audit", description: "Detailed security audit feature coming soon!" }); };
+  const handleTestGen = () => { toast({ title: "Test Case Generation", description: "Test case generation feature coming soon!" }); };
 
-  // Placeholder function for "Explain Another"
-  const handleExplainAnother = () => {
-     toast({
-      title: "Explain Another",
-      description: "Functionality to explain another block or refine explanation coming soon!",
-    });
-     // Consider calling onClear() or similar to reset the state for new input
-     onClear(); // Example: Clear the view for a new explanation cycle
+  const renderSection = (title: string, icon: React.ReactNode, data: string[] | undefined | null, renderItem: (item: any, index: number) => React.ReactNode) => {
+    if (!data || data.length === 0) return null;
+    return (
+      <AccordionItem value={title.toLowerCase().replace(/\s+/g, '-')}>
+        <AccordionTrigger className="text-base font-semibold hover:no-underline">
+          <div className="flex items-center gap-2">
+            {icon} {title} <Badge variant="outline" className="ml-2">{data.length}</Badge>
+          </div>
+        </AccordionTrigger>
+        <AccordionContent className="pt-2 pb-4 pl-2 pr-2">
+          <ul className="list-none space-y-2 text-sm">
+            {data.map(renderItem)}
+          </ul>
+        </AccordionContent>
+      </AccordionItem>
+    );
   };
 
 
   const renderContent = () => {
-    // ⚙️ 2. Code Analysis in Steps (Loading State)
     if (isLoading) {
       return (
         <div className="space-y-4 p-4 border border-dashed border-muted rounded-md">
            <div className="flex items-center space-x-2 text-muted-foreground">
              <Brain className="h-5 w-5 animate-pulse" />
-             <span>AI Agent is thinking...</span>
+             <span>AI Agent is analyzing...</span>
            </div>
-          <Skeleton className="h-6 w-1/4" /> {/* Language placeholder */}
-          <Skeleton className="h-5 w-3/4" /> {/* Header placeholder */}
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-5/6" />
-           <Skeleton className="h-5 w-2/4" /> {/* Summary placeholder */}
-          <Skeleton className="h-4 w-full" />
+           <Skeleton className="h-5 w-1/4" /> {/* Language */}
+           <Skeleton className="h-6 w-3/4 mt-4" /> {/* Main Explanation Title */}
+           <Skeleton className="h-4 w-full" />
+           <Skeleton className="h-4 w-5/6" />
+           <Skeleton className="h-6 w-1/2 mt-4" /> {/* Summary Title */}
+           <Skeleton className="h-4 w-full" />
+           <Skeleton className="h-5 w-1/3 mt-4" /> {/* Accordion Title */}
+           <Skeleton className="h-5 w-1/3 mt-2" /> {/* Accordion Title */}
         </div>
       );
     }
@@ -101,36 +144,128 @@ export function CodeExplanationDisplay({ explanationData, isLoading, error, onCl
       );
     }
 
-    // 📋 3. Readable Code Explanation & 4. Warnings
+    // Render the full analysis including new sections
     return (
-      <>
-        {/* Display Detected Language */}
-        {explanationData.language && explanationData.language !== "Unknown" && (
-          <div className="mb-4">
-            <Badge variant="secondary">Detected Language: {explanationData.language}</Badge>
+      <div className="space-y-6">
+         {/* Detected Language */}
+        {explanationData.language && (
+          <div>
+            <Badge variant="secondary" className="text-sm">
+               <Terminal className="mr-1.5 h-3.5 w-3.5"/> Language: {explanationData.language}
+            </Badge>
           </div>
         )}
 
-         {/* ⚠️ 4. Agent Warnings & Suggestions */}
-        {explanationData.warnings && explanationData.warnings.length > 0 && (
-          <Alert variant="destructive" className="mb-6 shadow-sm">
-             <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Agent Warnings & Suggestions</AlertTitle>
-            <AlertDescription>
-              <ul className="list-disc pl-5 mt-2 space-y-1">
-                {explanationData.warnings.map((warning, index) => (
-                  <li key={index}>{warning}</li>
-                ))}
-              </ul>
-            </AlertDescription>
-          </Alert>
-        )}
+        {/* Main Explanation */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Lightbulb className="h-5 w-5"/> Code Explanation
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="prose prose-sm dark:prose-invert max-w-none text-foreground prose-headings:text-foreground prose-strong:text-foreground prose-code:text-accent prose-a:text-primary prose-pre:bg-secondary prose-pre:text-secondary-foreground">
+              <ReactMarkdown>{explanationData.explanation_markdown}</ReactMarkdown>
+            </div>
+             <Button onClick={() => handleCopy(explanationData.explanation_markdown, "Explanation")} variant="ghost" size="sm" className="mt-2 text-xs text-muted-foreground hover:text-primary">
+                <Copy className="mr-1.5 h-3 w-3" /> Copy Explanation
+             </Button>
+          </CardContent>
+        </Card>
 
-        {/* 📋 3. Readable Code Explanation (Rendered Markdown) */}
-        <div className="prose prose-sm dark:prose-invert max-w-none text-foreground prose-headings:text-foreground prose-strong:text-foreground prose-code:text-accent prose-a:text-primary">
-           <ReactMarkdown>{explanationData.explanation_markdown}</ReactMarkdown>
-        </div>
-      </>
+        {/* Accordion for Suggestions and Analysis */}
+        <Accordion type="multiple" collapsible className="w-full">
+          {/* Warnings */}
+          {renderSection("General Warnings & Suggestions", <AlertTriangle className="h-4 w-4 text-destructive" />, explanationData.warnings, (warning, index) => (
+            <li key={`warn-${index}`} className="border-l-2 border-destructive pl-3 py-1">{warning}</li>
+          ))}
+
+          {/* Style Suggestions */}
+           {renderSection("Style & Formatting", <DraftingCompass className="h-4 w-4 text-blue-500" />, explanationData.style_suggestions, (suggestion, index) => (
+            <li key={`style-${index}`} className="border-l-2 border-blue-500 pl-3 py-1">{suggestion}</li>
+          ))}
+
+           {/* Code Smells */}
+           {renderSection("Code Smells", <Bug className="h-4 w-4 text-yellow-600" />, explanationData.code_smells, (smell, index) => (
+            <li key={`smell-${index}`} className="border-l-2 border-yellow-600 pl-3 py-1">{smell}</li>
+          ))}
+
+          {/* Security Vulnerabilities */}
+           {renderSection("Security Check", <ShieldAlert className="h-4 w-4 text-red-600" />, explanationData.security_vulnerabilities, (vuln, index) => (
+            <li key={`sec-${index}`} className="border-l-2 border-red-600 pl-3 py-1">{vuln}</li>
+          ))}
+
+          {/* Bug Suggestions */}
+          {explanationData.bug_suggestions && explanationData.bug_suggestions.length > 0 && (
+             <AccordionItem value="bug-suggestions">
+               <AccordionTrigger className="text-base font-semibold hover:no-underline">
+                  <div className="flex items-center gap-2">
+                    <Bug className="h-4 w-4 text-orange-500" /> Bug Analysis <Badge variant="outline" className="ml-2">{explanationData.bug_suggestions.length}</Badge>
+                  </div>
+               </AccordionTrigger>
+                <AccordionContent className="pt-2 pb-4 pl-2 pr-2 space-y-3">
+                 {explanationData.bug_suggestions.map((bug, index) => (
+                    <div key={`bug-${index}`} className="border-l-2 border-orange-500 pl-3 py-1 text-sm">
+                       <p><strong>Potential Bug:</strong> {bug.bug}</p>
+                       <p className="mt-1"><strong>Suggestion:</strong> {bug.fix_suggestion}</p>
+                    </div>
+                 ))}
+               </AccordionContent>
+             </AccordionItem>
+          )}
+
+          {/* Alternative Suggestions */}
+          {explanationData.alternative_suggestions && explanationData.alternative_suggestions.length > 0 && (
+             <AccordionItem value="alternative-suggestions">
+               <AccordionTrigger className="text-base font-semibold hover:no-underline">
+                 <div className="flex items-center gap-2">
+                   <GitCompareArrows className="h-4 w-4 text-purple-500" /> Alternative Approaches <Badge variant="outline" className="ml-2">{explanationData.alternative_suggestions.length}</Badge>
+                 </div>
+               </AccordionTrigger>
+               <AccordionContent className="pt-2 pb-4 pl-2 pr-2 space-y-4">
+                 {explanationData.alternative_suggestions.map((alt, index) => (
+                   <div key={`alt-${index}`} className="border-l-2 border-purple-500 pl-3 py-1 text-sm">
+                     <p><strong>Alternative:</strong> {alt.description}</p>
+                     <div className="mt-2">
+                       <pre className="bg-muted p-2 rounded text-xs font-mono overflow-x-auto relative group/alt-code">
+                         <code>{alt.code}</code>
+                         <Button
+                            onClick={() => handleCopy(alt.code, `Alternative code ${index + 1}`)}
+                            variant="ghost"
+                            size="icon"
+                            className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover/alt-code:opacity-100 transition-opacity"
+                            aria-label="Copy alternative code"
+                         >
+                            <Copy className="h-3.5 w-3.5" />
+                         </Button>
+                       </pre>
+                     </div>
+                   </div>
+                 ))}
+               </AccordionContent>
+             </AccordionItem>
+          )}
+
+           {/* Flowchart */}
+           {isClient && explanationData.flowchart_mermaid && (
+             <AccordionItem value="flowchart">
+               <AccordionTrigger className="text-base font-semibold hover:no-underline">
+                 <div className="flex items-center gap-2">
+                   <Workflow className="h-4 w-4 text-green-600" /> Code Flowchart
+                 </div>
+               </AccordionTrigger>
+               <AccordionContent className="pt-2 pb-4 pl-2 pr-2 flex justify-center items-center">
+                 {/* Container for Mermaid */}
+                  <div id="mermaid-flowchart" className="mermaid w-full min-h-[100px] flex justify-center items-center">
+                     {/* Mermaid will render SVG here */}
+                     <Skeleton className="h-24 w-3/4" /> {/* Placeholder while rendering */}
+                 </div>
+               </AccordionContent>
+             </AccordionItem>
+           )}
+        </Accordion>
+
+      </div>
     );
   };
 
@@ -141,22 +276,29 @@ export function CodeExplanationDisplay({ explanationData, isLoading, error, onCl
       </ScrollArea>
 
        {/* Action Buttons */}
-      {explanationData && !isLoading && !error && (
-         <div className="flex flex-wrap gap-2 justify-end items-center mt-auto pt-4 border-t">
-            {/* 🧠 5. Knowledge Enhancer */}
-             <Button onClick={handleLearnMore} variant="ghost" size="sm" className="text-primary hover:bg-primary/10">
-                <BookOpen className="mr-2 h-4 w-4" /> Learn More
-             </Button>
-             {/* 🧮 6. Explain Another Block? */}
-              <Button onClick={handleExplainAnother} variant="outline" size="sm" className="text-foreground border-border hover:bg-accent/50">
-                <RefreshCw className="mr-2 h-4 w-4" /> Explain Another
-             </Button>
-             {/* Copy Button */}
-            <Button onClick={handleCopy} variant="outline" size="sm" className="border-primary text-primary hover:bg-primary/10">
-                <Copy className="mr-2 h-4 w-4" /> Copy Explanation
+      <div className="flex flex-wrap gap-2 justify-end items-center mt-auto pt-4 border-t">
+           {/* Future Buttons - Keep placeholders or implement */}
+            <Button onClick={handleLearnMore} variant="ghost" size="sm" className="text-primary hover:bg-primary/10">
+                <BookOpen className="mr-1.5 h-4 w-4" /> Learn More
+            </Button>
+            <Button onClick={handleExplainAnother} variant="outline" size="sm" className="text-foreground border-border hover:bg-accent/50">
+                <RefreshCw className="mr-1.5 h-4 w-4" /> Explain Another
+            </Button>
+            {/* Add buttons for refactor, security, test gen if desired */}
+            {/* <Button onClick={handleRefactor} variant="ghost" size="sm" title="Suggest Refactoring (Coming Soon)" disabled><Wrench className="mr-1.5 h-4 w-4"/> Refactor</Button> */}
+            {/* <Button onClick={handleSecurityAudit} variant="ghost" size="sm" title="Perform Security Audit (Coming Soon)" disabled><Shield className="mr-1.5 h-4 w-4"/> Audit</Button> */}
+            {/* <Button onClick={handleTestGen} variant="ghost" size="sm" title="Generate Test Cases (Coming Soon)" disabled><TestTube className="mr-1.5 h-4 w-4"/> Tests</Button> */}
+             {/* Copy Main Explanation Button */}
+            <Button
+                onClick={() => handleCopy(explanationData?.explanation_markdown || '', "Explanation")}
+                variant="outline" size="sm"
+                className="border-primary text-primary hover:bg-primary/10"
+                disabled={!explanationData?.explanation_markdown || isLoading}
+            >
+                <Copy className="mr-1.5 h-4 w-4" /> Copy Explanation
             </Button>
          </div>
-      )}
     </div>
   );
 }
+
