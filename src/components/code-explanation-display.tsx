@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Copy, AlertTriangle, Info, Brain, RefreshCw, BookOpen, Lightbulb, Bug, ShieldAlert, DraftingCompass, GitCompareArrows, Terminal, ExternalLink } from 'lucide-react';
+import { Copy, AlertTriangle, Info, Brain, RefreshCw, BookOpen, Lightbulb, Bug, ShieldAlert, DraftingCompass, GitCompareArrows, Terminal, ExternalLink, Sparkles } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -22,13 +22,23 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import type { CodeExplanation } from '@/services/github';
-import { cn } from '@/lib/utils'; // Import cn utility
+import { cn } from '@/lib/utils';
+
+export interface SensayInsight {
+  text: string;
+  rawResponse?: any;
+}
 
 interface CodeExplanationDisplayProps {
   explanationData: CodeExplanation | null;
   isLoading: boolean;
   error: string | null;
   onClear: () => void;
+  sensayInsight: SensayInsight | null;
+  isSensayLoading: boolean;
+  sensayError: string | null;
+  onGetSensayInsight: () => void;
+  hasCode: boolean; // To enable/disable Sensay button
 }
 
 interface LearnMoreLink {
@@ -36,7 +46,17 @@ interface LearnMoreLink {
   url: string;
 }
 
-export function CodeExplanationDisplay({ explanationData, isLoading, error, onClear }: CodeExplanationDisplayProps) {
+export function CodeExplanationDisplay({
+  explanationData,
+  isLoading,
+  error,
+  onClear,
+  sensayInsight,
+  isSensayLoading,
+  sensayError,
+  onGetSensayInsight,
+  hasCode,
+}: CodeExplanationDisplayProps) {
   const { toast } = useToast();
   const [isLearnMoreDialogOpen, setIsLearnMoreDialogOpen] = useState(false);
   const [learnMoreLinks, setLearnMoreLinks] = useState<LearnMoreLink[]>([]);
@@ -61,47 +81,25 @@ export function CodeExplanationDisplay({ explanationData, isLoading, error, onCl
     }
   };
 
-  // Updated Learn More button handler to generate links and open dialog
   const handleLearnMore = () => {
     const language = explanationData?.language;
     if (language && language !== "Unknown") {
-        // Basic concepts to search for - could be enhanced by analyzing explanation content
         const concepts = [
-            "Basics",
-            "Syntax",
-            "Functions",
-            "Control Flow (if/else, loops)",
-            "Data Structures (arrays, objects/maps)",
-            "Error Handling",
-            "Asynchronous Programming (if applicable)", // Add more relevant general concepts
-            "Classes and Objects",
-            "Modules/Imports",
-            "Best Practices"
+            "Basics", "Syntax", "Functions", "Control Flow (if/else, loops)",
+            "Data Structures (arrays, objects/maps)", "Error Handling",
+            "Asynchronous Programming", "Classes and Objects", "Modules/Imports", "Best Practices"
         ];
-
-        const generatedLinks: LearnMoreLink[] = concepts.slice(0, 10).map(concept => { // Limit to 10 links
-            const searchTerm = `${language} ${concept} tutorial`;
-            return {
-                title: `${language}: ${concept}`,
-                url: `https://www.google.com/search?q=${encodeURIComponent(searchTerm)}`
-            };
-        });
-
+        const generatedLinks: LearnMoreLink[] = concepts.slice(0, 10).map(concept => ({
+            title: `${language}: ${concept}`,
+            url: `https://www.google.com/search?q=${encodeURIComponent(`${language} ${concept} tutorial`)}`
+        }));
         setLearnMoreLinks(generatedLinks);
-        setIsLearnMoreDialogOpen(true); // Open the dialog
-
-        toast({
-            title: "Learn More",
-            description: `Showing learning resources for ${language}.`,
-        });
+        setIsLearnMoreDialogOpen(true);
+        toast({ title: "Learn More", description: `Showing learning resources for ${language}.` });
     } else {
-        toast({
-            title: "Learn More",
-            description: "Cannot determine the language to search for. Try analyzing a different snippet.",
-            variant: "default"
-        });
+        toast({ title: "Learn More", description: "Cannot determine language. Try analyzing code first.", variant: "default" });
     }
-   };
+  };
 
   const handleExplainAnother = () => { onClear(); toast({ title: "Explain Another", description: "Ready for new input!" }); };
 
@@ -123,28 +121,91 @@ export function CodeExplanationDisplay({ explanationData, isLoading, error, onCl
     );
   };
 
+  const renderSensayContent = () => {
+    if (isSensayLoading) {
+      return (
+        <div className="space-y-2 p-3 border border-dashed border-muted rounded-md">
+          <div className="flex items-center space-x-2 text-muted-foreground">
+            <Sparkles className="h-5 w-5 animate-pulse text-purple-500" />
+            <span>Sensay Wisdom Engine is processing...</span>
+          </div>
+          <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-5/6" />
+        </div>
+      );
+    }
+    if (sensayError) {
+      return (
+        <Alert variant="destructive" className="mt-4">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Sensay Error</AlertTitle>
+          <AlertDescription>{sensayError}</AlertDescription>
+        </Alert>
+      );
+    }
+    if (sensayInsight) {
+      return (
+        <Card className="mt-6 border-purple-500/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg text-purple-600 dark:text-purple-400">
+              <Sparkles className="h-5 w-5" /> Sensay Wisdom Insights
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="bg-secondary text-secondary-foreground p-4 rounded-lg shadow-inner">
+               <div className={cn(
+                  "prose prose-sm max-w-none",
+                  "prose-headings:text-secondary-foreground prose-p:text-secondary-foreground prose-strong:text-secondary-foreground prose-ul:text-secondary-foreground prose-li:text-secondary-foreground",
+                  "prose-code:text-accent prose-code:bg-accent/10 prose-code:px-1 prose-code:py-0.5 prose-code:rounded",
+                  "prose-pre:bg-background prose-pre:text-foreground prose-pre:p-3 prose-pre:rounded-md prose-pre:overflow-x-auto",
+                  "prose-a:text-primary hover:prose-a:underline"
+               )}>
+                <ReactMarkdown>{sensayInsight.text}</ReactMarkdown>
+              </div>
+            </div>
+            <Button onClick={() => handleCopy(sensayInsight.text, "Sensay Insight")} variant="ghost" size="sm" className="mt-2 text-xs text-muted-foreground hover:text-primary">
+              <Copy className="mr-1.5 h-3 w-3" /> Copy Sensay Insight
+            </Button>
+            {/* Optionally display raw Sensay response for debugging
+            {sensayInsight.rawResponse && (
+              <details className="mt-2 text-xs">
+                <summary>Raw Sensay Response</summary>
+                <pre className="bg-muted p-2 rounded text-xs font-mono overflow-x-auto max-h-32">
+                  {JSON.stringify(sensayInsight.rawResponse, null, 2)}
+                </pre>
+              </details>
+            )}
+            */}
+          </CardContent>
+        </Card>
+      );
+    }
+    return null;
+  };
+
 
   const renderContent = () => {
-    if (isLoading) {
+    if (isLoading && !explanationData) { // Only show main skeleton if no data yet
       return (
         <div className="space-y-4 p-4 border border-dashed border-muted rounded-md">
            <div className="flex items-center space-x-2 text-muted-foreground">
              <Brain className="h-5 w-5 animate-pulse" />
              <span>AI Agent is analyzing...</span>
            </div>
-           <Skeleton className="h-5 w-1/4" /> {/* Language */}
-           <Skeleton className="h-6 w-3/4 mt-4" /> {/* Main Explanation Title */}
+           <Skeleton className="h-5 w-1/4" />
+           <Skeleton className="h-6 w-3/4 mt-4" />
            <Skeleton className="h-4 w-full" />
            <Skeleton className="h-4 w-5/6" />
-           <Skeleton className="h-6 w-1/2 mt-4" /> {/* Summary Title */}
+           <Skeleton className="h-6 w-1/2 mt-4" />
            <Skeleton className="h-4 w-full" />
-           <Skeleton className="h-5 w-1/3 mt-4" /> {/* Accordion Title */}
-           <Skeleton className="h-5 w-1/3 mt-2" /> {/* Accordion Title */}
+           <Skeleton className="h-5 w-1/3 mt-4" />
+           <Skeleton className="h-5 w-1/3 mt-2" />
         </div>
       );
     }
 
-    if (error) {
+    if (error && !explanationData) { // Only show main error if no data
       return (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
@@ -154,20 +215,19 @@ export function CodeExplanationDisplay({ explanationData, isLoading, error, onCl
       );
     }
 
-    if (!explanationData) {
+    if (!explanationData && !isLoading && !error && !isSensayLoading && !sensayInsight) {
       return (
         <div className="text-muted-foreground text-center py-10 border border-dashed border-muted rounded-md flex flex-col items-center justify-center h-full">
           <Info className="mx-auto h-10 w-10 mb-4 text-primary" />
           <p className="text-lg font-medium mb-2">Awaiting Analysis</p>
-          <p className="text-sm">Enter code on the left and click "Explain Code" <br/> to see the AI agent's analysis here.</p>
+          <p className="text-sm">Enter code on the left and click "Explain Code".</p>
         </div>
       );
     }
-
-    // Render the full analysis including new sections
-    return (
+    
+    // Render GitHub explanation content if available
+    const gitHubExplanationContent = explanationData && (
       <div className="space-y-6">
-         {/* Detected Language */}
         {explanationData.language && (
           <div>
             <Badge variant="secondary" className="text-sm">
@@ -175,23 +235,20 @@ export function CodeExplanationDisplay({ explanationData, isLoading, error, onCl
             </Badge>
           </div>
         )}
-
-        {/* Main Explanation */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
-              <Lightbulb className="h-5 w-5"/> Code Explanation
+              <Github className="h-5 w-5 text-blue-500"/> GitHub Model Explanation
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {/* Added dark background container for explanation */}
              <div className="bg-secondary text-secondary-foreground p-4 rounded-lg shadow-inner">
                 <div className={cn(
-                    "prose prose-sm max-w-none", // Base prose styles
-                    "prose-headings:text-secondary-foreground prose-p:text-secondary-foreground prose-strong:text-secondary-foreground prose-ul:text-secondary-foreground prose-li:text-secondary-foreground", // Force text color
-                    "prose-code:text-accent prose-code:bg-accent/10 prose-code:px-1 prose-code:py-0.5 prose-code:rounded", // Specific inline code styling for dark bg
-                    "prose-pre:bg-background prose-pre:text-foreground prose-pre:p-3 prose-pre:rounded-md prose-pre:overflow-x-auto", // Code block styling for dark bg
-                    "prose-a:text-primary hover:prose-a:underline" // Link styling
+                    "prose prose-sm max-w-none",
+                    "prose-headings:text-secondary-foreground prose-p:text-secondary-foreground prose-strong:text-secondary-foreground prose-ul:text-secondary-foreground prose-li:text-secondary-foreground",
+                    "prose-code:text-accent prose-code:bg-accent/10 prose-code:px-1 prose-code:py-0.5 prose-code:rounded",
+                    "prose-pre:bg-background prose-pre:text-foreground prose-pre:p-3 prose-pre:rounded-md prose-pre:overflow-x-auto",
+                    "prose-a:text-primary hover:prose-a:underline"
                  )}>
                     <ReactMarkdown>{explanationData.explanation_markdown}</ReactMarkdown>
                 </div>
@@ -202,40 +259,29 @@ export function CodeExplanationDisplay({ explanationData, isLoading, error, onCl
           </CardContent>
         </Card>
 
-        {/* Accordion for Suggestions and Analysis */}
-        {/* Removed collapsible prop as it causes warnings with type="multiple" */}
         <Accordion type="multiple" className="w-full">
-          {/* Warnings */}
           {renderSection("General Warnings & Suggestions", <AlertTriangle className="h-4 w-4 text-destructive" />, explanationData.warnings, (warning, index) => (
             <li key={`warn-${index}`} className="border-l-2 border-destructive pl-3 py-1">{warning}</li>
           ))}
-
-          {/* Style Suggestions */}
-           {renderSection("Style & Formatting", <DraftingCompass className="h-4 w-4 text-blue-500" />, explanationData.style_suggestions, (suggestion, index) => (
+          {renderSection("Style & Formatting", <DraftingCompass className="h-4 w-4 text-blue-500" />, explanationData.style_suggestions, (suggestion, index) => (
             <li key={`style-${index}`} className="border-l-2 border-blue-500 pl-3 py-1">{suggestion}</li>
           ))}
-
-           {/* Code Smells */}
-           {renderSection("Code Smells", <Bug className="h-4 w-4 text-yellow-600" />, explanationData.code_smells, (smell, index) => (
-            <li key={`smell-${index}`} className="border-l-2 border-yellow-600 pl-3 py-1">{smell}</li>
+           {renderSection("Code Smells", <Bug className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />, explanationData.code_smells, (smell, index) => (
+            <li key={`smell-${index}`} className="border-l-2 border-yellow-600 dark:border-yellow-400 pl-3 py-1">{smell}</li>
           ))}
-
-          {/* Security Vulnerabilities */}
-           {renderSection("Security Check", <ShieldAlert className="h-4 w-4 text-red-600" />, explanationData.security_vulnerabilities, (vuln, index) => (
-            <li key={`sec-${index}`} className="border-l-2 border-red-600 pl-3 py-1">{vuln}</li>
+           {renderSection("Security Check", <ShieldAlert className="h-4 w-4 text-red-600 dark:text-red-400" />, explanationData.security_vulnerabilities, (vuln, index) => (
+            <li key={`sec-${index}`} className="border-l-2 border-red-600 dark:border-red-400 pl-3 py-1">{vuln}</li>
           ))}
-
-          {/* Bug Suggestions */}
           {explanationData.bug_suggestions && explanationData.bug_suggestions.length > 0 && (
              <AccordionItem value="bug-suggestions">
                <AccordionTrigger className="text-base font-semibold hover:no-underline">
                   <div className="flex items-center gap-2">
-                    <Bug className="h-4 w-4 text-orange-500" /> Bug Analysis <Badge variant="outline" className="ml-2">{explanationData.bug_suggestions.length}</Badge>
+                    <Bug className="h-4 w-4 text-orange-500 dark:text-orange-400" /> Bug Analysis <Badge variant="outline" className="ml-2">{explanationData.bug_suggestions.length}</Badge>
                   </div>
                </AccordionTrigger>
                 <AccordionContent className="pt-2 pb-4 pl-2 pr-2 space-y-3">
                  {explanationData.bug_suggestions.map((bug, index) => (
-                    <div key={`bug-${index}`} className="border-l-2 border-orange-500 pl-3 py-1 text-sm">
+                    <div key={`bug-${index}`} className="border-l-2 border-orange-500 dark:border-orange-400 pl-3 py-1 text-sm">
                        <p><strong>Potential Bug:</strong> {bug.bug}</p>
                        <p className="mt-1"><strong>Suggestion:</strong> {bug.fix_suggestion}</p>
                     </div>
@@ -243,31 +289,26 @@ export function CodeExplanationDisplay({ explanationData, isLoading, error, onCl
                </AccordionContent>
              </AccordionItem>
           )}
-
-          {/* Alternative Suggestions */}
           {explanationData.alternative_suggestions && explanationData.alternative_suggestions.length > 0 && (
              <AccordionItem value="alternative-suggestions">
                <AccordionTrigger className="text-base font-semibold hover:no-underline">
                  <div className="flex items-center gap-2">
-                   <GitCompareArrows className="h-4 w-4 text-purple-500" /> Alternative Approaches <Badge variant="outline" className="ml-2">{explanationData.alternative_suggestions.length}</Badge>
+                   <GitCompareArrows className="h-4 w-4 text-purple-500 dark:text-purple-400" /> Alternative Approaches <Badge variant="outline" className="ml-2">{explanationData.alternative_suggestions.length}</Badge>
                  </div>
                </AccordionTrigger>
                <AccordionContent className="pt-2 pb-4 pl-2 pr-2 space-y-4">
                  {explanationData.alternative_suggestions.map((alt, index) => (
-                   <div key={`alt-${index}`} className="border-l-2 border-purple-500 pl-3 py-1 text-sm">
+                   <div key={`alt-${index}`} className="border-l-2 border-purple-500 dark:border-purple-400 pl-3 py-1 text-sm">
                      <p><strong>Alternative:</strong> {alt.description}</p>
                      <div className="mt-2">
                        <pre className="bg-muted p-2 rounded text-xs font-mono overflow-x-auto relative group/alt-code">
                          <code>{alt.code}</code>
                          <Button
                             onClick={() => handleCopy(alt.code, `Alternative code ${index + 1}`)}
-                            variant="ghost"
-                            size="icon"
+                            variant="ghost" size="icon"
                             className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover/alt-code:opacity-100 transition-opacity"
                             aria-label="Copy alternative code"
-                         >
-                            <Copy className="h-3.5 w-3.5" />
-                         </Button>
+                         > <Copy className="h-3.5 w-3.5" /> </Button>
                        </pre>
                      </div>
                    </div>
@@ -275,10 +316,15 @@ export function CodeExplanationDisplay({ explanationData, isLoading, error, onCl
                </AccordionContent>
              </AccordionItem>
           )}
-
         </Accordion>
-
       </div>
+    );
+
+    return (
+      <>
+        {gitHubExplanationContent}
+        {renderSensayContent()}
+      </>
     );
   };
 
@@ -288,16 +334,17 @@ export function CodeExplanationDisplay({ explanationData, isLoading, error, onCl
          {renderContent()}
       </ScrollArea>
 
-       {/* Action Buttons */}
       <div className="flex flex-wrap gap-2 justify-end items-center mt-auto pt-4 border-t">
-           {/* Updated Learn More Button */}
-            <Button onClick={handleLearnMore} variant="ghost" size="sm" className="text-primary hover:bg-primary/10" disabled={isLoading || !explanationData || !explanationData.language || explanationData.language === 'Unknown'}>
+            <Button onClick={handleLearnMore} variant="ghost" size="sm" className="text-primary hover:bg-primary/10" disabled={isLoading || !explanationData?.language || explanationData.language === 'Unknown'}>
                 <BookOpen className="mr-1.5 h-4 w-4" /> Learn More
+            </Button>
+            <Button onClick={onGetSensayInsight} variant="outline" size="sm" className="text-purple-600 border-purple-500 hover:bg-purple-500/10 dark:text-purple-400 dark:border-purple-400" disabled={isSensayLoading || isLoading || !hasCode}>
+                {isSensayLoading ? <Brain className="mr-1.5 h-4 w-4 animate-pulse" /> : <Sparkles className="mr-1.5 h-4 w-4" />}
+                {isSensayLoading ? "Sensay Thinking..." : "Get Sensay Wisdom"}
             </Button>
             <Button onClick={handleExplainAnother} variant="outline" size="sm" className="text-foreground border-border hover:bg-accent/50">
                 <RefreshCw className="mr-1.5 h-4 w-4" /> Explain Another
             </Button>
-             {/* Copy Main Explanation Button */}
             <Button
                 onClick={() => handleCopy(explanationData?.explanation_markdown || '', "Explanation")}
                 variant="outline" size="sm"
@@ -308,7 +355,6 @@ export function CodeExplanationDisplay({ explanationData, isLoading, error, onCl
             </Button>
          </div>
 
-        {/* Learn More Dialog */}
          <Dialog open={isLearnMoreDialogOpen} onOpenChange={setIsLearnMoreDialogOpen}>
            <DialogContent className="sm:max-w-[525px]">
              <DialogHeader>
@@ -341,9 +387,7 @@ export function CodeExplanationDisplay({ explanationData, isLoading, error, onCl
              </ScrollArea>
              <DialogFooter>
                 <DialogClose asChild>
-                 <Button type="button" variant="secondary">
-                   Close
-                 </Button>
+                 <Button type="button" variant="secondary"> Close </Button>
                </DialogClose>
              </DialogFooter>
            </DialogContent>

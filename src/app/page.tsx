@@ -1,33 +1,48 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { CodeInput } from '@/components/code-input';
-import { CodeExplanationDisplay } from '@/components/code-explanation-display';
+import { CodeExplanationDisplay, type SensayInsight } from '@/components/code-explanation-display';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import type { CodeExplanation } from '@/services/github'; // Use the enhanced type
+import type { CodeExplanation } from '@/services/github';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Info, Github } from 'lucide-react'; // Import Github icon
+import { Info, Github, Settings } from 'lucide-react';
+import { getSensayCodeInsight, type SensayCodeInsightOutput } from '@/ai/flows/sensay-code-insight-flow';
+import { ThemeToggle } from '@/components/theme-toggle'; // Import ThemeToggle
 
 export default function Home() {
-  // State now holds the enhanced CodeExplanation object
   const [explanationData, setExplanationData] = useState<CodeExplanation | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [agentStatus, setAgentStatus] = useState<string | null>(null); // For agent messages
-  // Removed viewCount state and useEffect
+  const [agentStatus, setAgentStatus] = useState<string | null>(null);
+  
+  const [currentCodeSnippet, setCurrentCodeSnippet] = useState<string>('');
+
+  // State for Sensay Insights
+  const [sensayInsight, setSensayInsight] = useState<SensayInsight | null>(null);
+  const [isSensayLoading, setIsSensayLoading] = useState(false);
+  const [sensayError, setSensayError] = useState<string | null>(null);
+
 
   const handleExplanationUpdate = (
-    data: CodeExplanation | null, // Expects the enhanced type
+    data: CodeExplanation | null,
     loading: boolean,
     errorMsg: string | null,
-    status: string | null // Receive agent status updates
+    status: string | null,
+    code: string | null // Receive code snippet from CodeInput
   ) => {
     setExplanationData(data);
     setIsLoading(loading);
     setError(errorMsg);
     setAgentStatus(status);
+    if (code) {
+      setCurrentCodeSnippet(code); // Store the code snippet
+    }
+    // Clear Sensay insights when a new GitHub explanation is fetched
+    setSensayInsight(null);
+    setSensayError(null);
   };
 
   const handleClear = () => {
@@ -35,22 +50,50 @@ export default function Home() {
     setIsLoading(false);
     setError(null);
     setAgentStatus(null);
-    // Potentially also clear the CodeInput state if needed via a ref or callback
+    setCurrentCodeSnippet('');
+    setSensayInsight(null);
+    setIsSensayLoading(false);
+    setSensayError(null);
   };
+
+  const handleSensayInsightRequest = useCallback(async () => {
+    if (!currentCodeSnippet) {
+      setSensayError("No code snippet available to analyze with Sensay.");
+      return;
+    }
+
+    setIsSensayLoading(true);
+    setSensayError(null);
+    setSensayInsight(null); // Clear previous insight
+
+    try {
+      setAgentStatus("Requesting deeper insights from Sensay Wisdom Engine...");
+      const result: SensayCodeInsightOutput = await getSensayCodeInsight({ codeSnippet: currentCodeSnippet });
+      setSensayInsight({
+        text: result.insight,
+        rawResponse: result.rawSensayResponse,
+      });
+      setAgentStatus("Sensay insights received.");
+    } catch (e) {
+      const errorMsg = e instanceof Error ? e.message : "An unexpected error occurred while fetching Sensay insights.";
+      setSensayError(errorMsg);
+      setAgentStatus("Error receiving Sensay insights.");
+      console.error("Sensay Insight Error:", e);
+    } finally {
+      setIsSensayLoading(false);
+    }
+  }, [currentCodeSnippet]);
 
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
-      <header className="p-4 border-b flex justify-center items-center relative"> {/* Use flex and relative */}
-        {/* Title and Subtitle (centered) */}
-        <div className="text-center">
+      <header className="p-4 border-b flex justify-between items-center relative">
+        <div className="text-center flex-1">
           <h1 className="text-2xl font-bold">CodeClarity 🧠</h1>
           <p className="text-sm text-muted-foreground">Your AI Code Review & Explanation Agent</p>
         </div>
-
-        {/* Right-aligned section for GitHub link */}
         <div className="absolute top-4 right-4 flex items-center gap-4">
-          {/* GitHub Link */}
+          <ThemeToggle />
            <div className="flex items-center gap-1 text-sm text-muted-foreground">
              <span>Developed by</span>
               <a
@@ -67,28 +110,24 @@ export default function Home() {
         </div>
       </header>
       <main className="flex flex-1 overflow-hidden">
-        {/* Left Panel: Code Input */}
         <div className="flex-1 p-4 overflow-auto">
           <Card className="h-full shadow-md">
             <CardContent className="p-6 h-full flex flex-col">
               <h2 className="text-xl font-semibold mb-4 text-foreground">Enter Code Snippet</h2>
-              <CodeInput onExplanationUpdate={handleExplanationUpdate} />
+              <CodeInput onExplanationUpdate={handleExplanationUpdate} onClear={handleClear} />
             </CardContent>
           </Card>
         </div>
 
         <Separator orientation="vertical" className="h-full bg-border" />
 
-        {/* Right Panel: Explanation & Agent Output */}
         <div className="flex-1 p-4 overflow-auto">
            <Card className="h-full shadow-md">
             <CardContent className="p-6 h-full flex flex-col">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold text-foreground">Agent Analysis</h2>
-                {/* Add other controls here if needed, e.g., history toggle */}
               </div>
 
-              {/* Agent Status Area */}
               {agentStatus && !isLoading && !error && (
                  <Alert variant="default" className="mb-4 bg-accent/10 border-accent/50">
                    <Info className="h-4 w-4 text-accent" />
@@ -97,18 +136,21 @@ export default function Home() {
                  </Alert>
               )}
 
-              {/* Main Explanation Display */}
               <CodeExplanationDisplay
-                explanationData={explanationData} // Pass the full data object
+                explanationData={explanationData}
                 isLoading={isLoading}
                 error={error}
-                onClear={handleClear} // Pass clear handler
+                onClear={handleClear}
+                sensayInsight={sensayInsight}
+                isSensayLoading={isSensayLoading}
+                sensayError={sensayError}
+                onGetSensayInsight={handleSensayInsightRequest}
+                hasCode={!!currentCodeSnippet}
               />
             </CardContent>
           </Card>
         </div>
       </main>
-      {/* Footer could go here if needed */}
     </div>
   );
 }
