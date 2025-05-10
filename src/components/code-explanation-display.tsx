@@ -21,7 +21,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import type { CodeExplanation } from '@/services/github';
+import type { ExplainCodeOutput as CodeExplanation } from '@/ai/flows/explain-code'; // Updated type
 import { cn } from '@/lib/utils';
 
 export interface SensayInsight {
@@ -38,7 +38,7 @@ interface CodeExplanationDisplayProps {
   isSensayLoading: boolean;
   sensayError: string | null;
   onGetSensayInsight: () => void;
-  hasCode: boolean; // To enable/disable Sensay button
+  hasCode: boolean;
 }
 
 interface LearnMoreLink {
@@ -97,7 +97,13 @@ export function CodeExplanationDisplay({
         setIsLearnMoreDialogOpen(true);
         toast({ title: "Learn More", description: `Showing learning resources for ${language}.` });
     } else {
-        toast({ title: "Learn More", description: "Cannot determine language. Try analyzing code first.", variant: "default" });
+       setLearnMoreLinks([
+        { title: "General Programming Concepts", url: "https://www.google.com/search?q=programming+concepts+tutorial" },
+        { title: "Introduction to Algorithms", url: "https://www.google.com/search?q=introduction+to+algorithms" },
+        { title: "Data Structures Explained", url: "https://www.google.com/search?q=data+structures+explained" }
+       ]);
+       setIsLearnMoreDialogOpen(true);
+       toast({ title: "Learn More", description: "Language not detected. Showing general programming resources.", variant: "default" });
     }
   };
 
@@ -124,7 +130,7 @@ export function CodeExplanationDisplay({
   const renderSensayContent = () => {
     if (isSensayLoading) {
       return (
-        <div className="space-y-2 p-3 border border-dashed border-muted rounded-md">
+        <div className="space-y-2 p-3 border border-dashed border-muted rounded-md mt-6">
           <div className="flex items-center space-x-2 text-muted-foreground">
             <Sparkles className="h-5 w-5 animate-pulse text-purple-500" />
             <span>Sensay Wisdom Engine is processing...</span>
@@ -155,10 +161,13 @@ export function CodeExplanationDisplay({
           <CardContent>
             <div className="bg-secondary text-secondary-foreground p-4 rounded-lg shadow-inner">
                <div className={cn(
-                  "prose prose-sm max-w-none",
+                  "prose prose-sm max-w-none dark:prose-invert",
                   "prose-headings:text-secondary-foreground prose-p:text-secondary-foreground prose-strong:text-secondary-foreground prose-ul:text-secondary-foreground prose-li:text-secondary-foreground",
+                  "dark:prose-headings:text-secondary-foreground dark:prose-p:text-secondary-foreground dark:prose-strong:text-secondary-foreground dark:prose-ul:text-secondary-foreground dark:prose-li:text-secondary-foreground",
                   "prose-code:text-accent prose-code:bg-accent/10 prose-code:px-1 prose-code:py-0.5 prose-code:rounded",
+                  "dark:prose-code:text-accent-foreground dark:prose-code:bg-accent/20",
                   "prose-pre:bg-background prose-pre:text-foreground prose-pre:p-3 prose-pre:rounded-md prose-pre:overflow-x-auto",
+                  "dark:prose-pre:bg-popover dark:prose-pre:text-popover-foreground",
                   "prose-a:text-primary hover:prose-a:underline"
                )}>
                 <ReactMarkdown>{sensayInsight.text}</ReactMarkdown>
@@ -167,16 +176,6 @@ export function CodeExplanationDisplay({
             <Button onClick={() => handleCopy(sensayInsight.text, "Sensay Insight")} variant="ghost" size="sm" className="mt-2 text-xs text-muted-foreground hover:text-primary">
               <Copy className="mr-1.5 h-3 w-3" /> Copy Sensay Insight
             </Button>
-            {/* Optionally display raw Sensay response for debugging
-            {sensayInsight.rawResponse && (
-              <details className="mt-2 text-xs">
-                <summary>Raw Sensay Response</summary>
-                <pre className="bg-muted p-2 rounded text-xs font-mono overflow-x-auto max-h-32">
-                  {JSON.stringify(sensayInsight.rawResponse, null, 2)}
-                </pre>
-              </details>
-            )}
-            */}
           </CardContent>
         </Card>
       );
@@ -184,14 +183,13 @@ export function CodeExplanationDisplay({
     return null;
   };
 
-
   const renderContent = () => {
-    if (isLoading && !explanationData) { // Only show main skeleton if no data yet
+    if (isLoading && !explanationData) {
       return (
         <div className="space-y-4 p-4 border border-dashed border-muted rounded-md">
            <div className="flex items-center space-x-2 text-muted-foreground">
              <Brain className="h-5 w-5 animate-pulse" />
-             <span>AI Agent is analyzing...</span>
+             <span>AI Agent (Gemini) is analyzing...</span>
            </div>
            <Skeleton className="h-5 w-1/4" />
            <Skeleton className="h-6 w-3/4 mt-4" />
@@ -205,7 +203,7 @@ export function CodeExplanationDisplay({
       );
     }
 
-    if (error && !explanationData) { // Only show main error if no data
+    if (error && !explanationData) {
       return (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
@@ -225,8 +223,7 @@ export function CodeExplanationDisplay({
       );
     }
     
-    // Render GitHub explanation content if available
-    const gitHubExplanationContent = explanationData && (
+    const geminiExplanationContent = explanationData && (
       <div className="space-y-6">
         {explanationData.language && (
           <div>
@@ -238,16 +235,19 @@ export function CodeExplanationDisplay({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
-              <Github className="h-5 w-5 text-blue-500"/> GitHub Model Explanation
+              <Brain className="h-5 w-5 text-green-500"/> Gemini Model Explanation
             </CardTitle>
           </CardHeader>
           <CardContent>
              <div className="bg-secondary text-secondary-foreground p-4 rounded-lg shadow-inner">
                 <div className={cn(
-                    "prose prose-sm max-w-none",
+                    "prose prose-sm max-w-none dark:prose-invert",
                     "prose-headings:text-secondary-foreground prose-p:text-secondary-foreground prose-strong:text-secondary-foreground prose-ul:text-secondary-foreground prose-li:text-secondary-foreground",
+                    "dark:prose-headings:text-secondary-foreground dark:prose-p:text-secondary-foreground dark:prose-strong:text-secondary-foreground dark:prose-ul:text-secondary-foreground dark:prose-li:text-secondary-foreground",
                     "prose-code:text-accent prose-code:bg-accent/10 prose-code:px-1 prose-code:py-0.5 prose-code:rounded",
+                    "dark:prose-code:text-accent-foreground dark:prose-code:bg-accent/20",
                     "prose-pre:bg-background prose-pre:text-foreground prose-pre:p-3 prose-pre:rounded-md prose-pre:overflow-x-auto",
+                    "dark:prose-pre:bg-popover dark:prose-pre:text-popover-foreground",
                     "prose-a:text-primary hover:prose-a:underline"
                  )}>
                     <ReactMarkdown>{explanationData.explanation_markdown}</ReactMarkdown>
@@ -259,15 +259,15 @@ export function CodeExplanationDisplay({
           </CardContent>
         </Card>
 
-        <Accordion type="multiple" className="w-full">
-          {renderSection("General Warnings & Suggestions", <AlertTriangle className="h-4 w-4 text-destructive" />, explanationData.warnings, (warning, index) => (
-            <li key={`warn-${index}`} className="border-l-2 border-destructive pl-3 py-1">{warning}</li>
+        <Accordion type="multiple" defaultValue={['general-warnings-suggestions']} className="w-full">
+          {renderSection("General Warnings & Suggestions", <AlertTriangle className="h-4 w-4 text-yellow-500 dark:text-yellow-400" />, explanationData.warnings, (warning, index) => (
+            <li key={`warn-${index}`} className="border-l-2 border-yellow-500 dark:border-yellow-400 pl-3 py-1">{warning}</li>
           ))}
           {renderSection("Style & Formatting", <DraftingCompass className="h-4 w-4 text-blue-500" />, explanationData.style_suggestions, (suggestion, index) => (
             <li key={`style-${index}`} className="border-l-2 border-blue-500 pl-3 py-1">{suggestion}</li>
           ))}
-           {renderSection("Code Smells", <Bug className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />, explanationData.code_smells, (smell, index) => (
-            <li key={`smell-${index}`} className="border-l-2 border-yellow-600 dark:border-yellow-400 pl-3 py-1">{smell}</li>
+           {renderSection("Code Smells", <Bug className="h-4 w-4 text-orange-500 dark:text-orange-400" />, explanationData.code_smells, (smell, index) => (
+            <li key={`smell-${index}`} className="border-l-2 border-orange-500 dark:border-orange-400 pl-3 py-1">{smell}</li>
           ))}
            {renderSection("Security Check", <ShieldAlert className="h-4 w-4 text-red-600 dark:text-red-400" />, explanationData.security_vulnerabilities, (vuln, index) => (
             <li key={`sec-${index}`} className="border-l-2 border-red-600 dark:border-red-400 pl-3 py-1">{vuln}</li>
@@ -276,12 +276,12 @@ export function CodeExplanationDisplay({
              <AccordionItem value="bug-suggestions">
                <AccordionTrigger className="text-base font-semibold hover:no-underline">
                   <div className="flex items-center gap-2">
-                    <Bug className="h-4 w-4 text-orange-500 dark:text-orange-400" /> Bug Analysis <Badge variant="outline" className="ml-2">{explanationData.bug_suggestions.length}</Badge>
+                    <Bug className="h-4 w-4 text-pink-500 dark:text-pink-400" /> Bug Analysis <Badge variant="outline" className="ml-2">{explanationData.bug_suggestions.length}</Badge>
                   </div>
                </AccordionTrigger>
                 <AccordionContent className="pt-2 pb-4 pl-2 pr-2 space-y-3">
                  {explanationData.bug_suggestions.map((bug, index) => (
-                    <div key={`bug-${index}`} className="border-l-2 border-orange-500 dark:border-orange-400 pl-3 py-1 text-sm">
+                    <div key={`bug-${index}`} className="border-l-2 border-pink-500 dark:border-pink-400 pl-3 py-1 text-sm">
                        <p><strong>Potential Bug:</strong> {bug.bug}</p>
                        <p className="mt-1"><strong>Suggestion:</strong> {bug.fix_suggestion}</p>
                     </div>
@@ -293,12 +293,12 @@ export function CodeExplanationDisplay({
              <AccordionItem value="alternative-suggestions">
                <AccordionTrigger className="text-base font-semibold hover:no-underline">
                  <div className="flex items-center gap-2">
-                   <GitCompareArrows className="h-4 w-4 text-purple-500 dark:text-purple-400" /> Alternative Approaches <Badge variant="outline" className="ml-2">{explanationData.alternative_suggestions.length}</Badge>
+                   <GitCompareArrows className="h-4 w-4 text-indigo-500 dark:text-indigo-400" /> Alternative Approaches <Badge variant="outline" className="ml-2">{explanationData.alternative_suggestions.length}</Badge>
                  </div>
                </AccordionTrigger>
                <AccordionContent className="pt-2 pb-4 pl-2 pr-2 space-y-4">
                  {explanationData.alternative_suggestions.map((alt, index) => (
-                   <div key={`alt-${index}`} className="border-l-2 border-purple-500 dark:border-purple-400 pl-3 py-1 text-sm">
+                   <div key={`alt-${index}`} className="border-l-2 border-indigo-500 dark:border-indigo-400 pl-3 py-1 text-sm">
                      <p><strong>Alternative:</strong> {alt.description}</p>
                      <div className="mt-2">
                        <pre className="bg-muted p-2 rounded text-xs font-mono overflow-x-auto relative group/alt-code">
@@ -322,7 +322,7 @@ export function CodeExplanationDisplay({
 
     return (
       <>
-        {gitHubExplanationContent}
+        {geminiExplanationContent}
         {renderSensayContent()}
       </>
     );
@@ -335,7 +335,7 @@ export function CodeExplanationDisplay({
       </ScrollArea>
 
       <div className="flex flex-wrap gap-2 justify-end items-center mt-auto pt-4 border-t">
-            <Button onClick={handleLearnMore} variant="ghost" size="sm" className="text-primary hover:bg-primary/10" disabled={isLoading || !explanationData?.language || explanationData.language === 'Unknown'}>
+            <Button onClick={handleLearnMore} variant="ghost" size="sm" className="text-primary hover:bg-primary/10" disabled={isLoading || !explanationData?.language}>
                 <BookOpen className="mr-1.5 h-4 w-4" /> Learn More
             </Button>
             <Button onClick={onGetSensayInsight} variant="outline" size="sm" className="text-purple-600 border-purple-500 hover:bg-purple-500/10 dark:text-purple-400 dark:border-purple-400" disabled={isSensayLoading || isLoading || !hasCode}>
@@ -381,7 +381,7 @@ export function CodeExplanationDisplay({
                       </a>
                     ))
                   ) : (
-                    <p className="text-muted-foreground text-center">No specific concepts identified for searching.</p>
+                    <p className="text-muted-foreground text-center">Feature under development. Educational content related to the code concepts will be shown here.</p>
                   )}
                 </div>
              </ScrollArea>

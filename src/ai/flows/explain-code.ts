@@ -2,33 +2,32 @@
 'use server';
 
 /**
- * @fileOverview AI Agent Flow for explaining code using the GitHub Copilot service.
+ * @fileOverview AI Agent Flow for explaining code using Google Gemini.
  * This file defines the Genkit flow that orchestrates the code explanation process.
- * It takes code input, calls the underlying service (`getCodeExplanation`), and returns
+ * It takes code input, calls the Gemini model via ai.generate(), and returns
  * the structured analysis.
  *
  * - explainCode - The primary exported function called by the UI to initiate the flow.
  * - ExplainCodeInput - The Zod schema and TypeScript type for the flow's input.
  * - ExplainCodeOutput - The Zod schema and TypeScript type for the flow's output.
- * - explainCodeFlow - The internal Genkit flow definition.
  */
 
 import { ai } from '@/ai/ai-instance';
 import { z } from 'genkit';
-// Import the service function and its return type
-import { getCodeExplanation, type CodeExplanation } from '@/services/github';
+import { generate } from 'genkit';
+import { GenkitError } from 'genkit';
+
 
 // Define the input schema using Zod
 const ExplainCodeInputSchema = z.object({
   codeSnippet: z.string().describe('The code snippet to explain.'),
 });
-// Define the TypeScript type based on the Zod schema
 export type ExplainCodeInput = z.infer<typeof ExplainCodeInputSchema>;
 
-// Define the output schema using Zod, matching the CodeExplanation interface
-// This ensures the flow's output structure is validated.
+// Define the output schema using Zod for Gemini's response.
+// This schema is used internally and for type generation, but not exported directly.
 const ExplainCodeOutputSchema = z.object({
-  language: z.string().describe('The detected programming language. Defaults to "Unknown".'),
+  language: z.string().optional().describe('The detected programming language. Defaults to "Unknown".'),
   explanation_markdown: z.string().describe('The detailed explanation of the code, formatted in markdown.'),
   warnings: z.array(z.string()).optional().describe('Potential warnings or general suggestions.'),
   style_suggestions: z.array(z.string()).optional().describe('Suggestions for improving code style and formatting.'),
@@ -43,49 +42,115 @@ const ExplainCodeOutputSchema = z.object({
     code: z.string().describe('Alternative code snippet.'),
   })).optional().describe('Alternative ways to write the same logic.'),
 });
-// Define the TypeScript type based on the Zod schema
 export type ExplainCodeOutput = z.infer<typeof ExplainCodeOutputSchema>;
 
+
 /**
- * Takes a code snippet and returns a comprehensive analysis using the configured GitHub Copilot service.
- * This acts as the primary entry point called by the frontend components to trigger the code explanation feature.
- * It simply wraps the call to the Genkit flow.
+ * Takes a code snippet and returns a comprehensive analysis using Google Gemini.
  *
  * @param input - Object containing the codeSnippet. Conforms to ExplainCodeInput.
- * @returns A promise resolving to the CodeExplanation object containing the full analysis. Conforms to ExplainCodeOutput.
+ * @returns A promise resolving to the analysis. Conforms to ExplainCodeOutput.
  */
 export async function explainCode(input: ExplainCodeInput): Promise<ExplainCodeOutput> {
-  // Directly call the defined Genkit flow.
   return explainCodeFlow(input);
 }
 
 // Define the Genkit flow using ai.defineFlow
-// This specifies the flow's name, input/output schemas, and the core async function.
-const explainCodeFlow = ai.defineFlow<
-  typeof ExplainCodeInputSchema,
-  typeof ExplainCodeOutputSchema // Use the defined output schema
->(
+const explainCodeFlow = ai.defineFlow(
   {
-    name: 'explainCodeFlow', // Name for identification in Genkit UI/logs
-    inputSchema: ExplainCodeInputSchema, // Link the input schema
-    outputSchema: ExplainCodeOutputSchema, // Link the output schema
+    name: 'explainCodeGeminiFlow',
+    inputSchema: ExplainCodeInputSchema,
+    outputSchema: ExplainCodeOutputSchema,
   },
-  async (input): Promise<CodeExplanation> => { // The core logic of the flow
+  async (input): Promise<ExplainCodeOutput> => {
     try {
-      // The main work is delegated to the getCodeExplanation service,
-      // which handles the actual API call to the GitHub model.
-      const result: CodeExplanation = await getCodeExplanation(input.codeSnippet);
-      // The result from the service already matches the desired output structure (CodeExplanation).
-      return result;
+      if (!ai.registry.plugin('googleai')) {
+         console.error("Google AI plugin not available. Check GOOGLE_GENAI_API_KEY and Genkit initialization.");
+         throw new GenkitError({
+            status: 'FAILED_PRECONDITION',
+            message: 'Google AI plugin is not configured. Please ensure GOOGLE_GENAI_API_KEY is set.'
+         });
+      }
+
+      const systemPrompt = `You are an AI Code Analyzer. Your task is to analyze the provided code snippet.
+      Provide the output in a VALID JSON format matching this structure:
+      {
+        "language": "Detected language (e.g., Python, JavaScript) or Unknown",
+        "explanation_markdown": "### 🔍 What this code does:\\n- Point 1\\n- Point 2\\n\\n### 💡 Summary:\\nSummary text.\\n",
+        "warnings": ["Optional general warning/suggestion 1", "Optional warning/suggestion 2"],
+        "style_suggestions": ["Optional style suggestion 1"],
+        "code_smells": ["Optional code smell 1"],
+        "security_vulnerabilities": ["Optional security vulnerability 1"],
+        "bug_suggestions": [
+          { "bug": "Potential bug description", "fix_suggestion": "How to fix it" }
+        ],
+        "alternative_suggestions": [
+          { "description": "Alternative 1 description", "code": "Alternative code snippet 1" }
+        ]
+      }
+      - Detect the programming language.
+      - Provide a step-by-step explanation of what the code does using markdown. Structure: ### 🔍 What this code does:, ### 💡 Summary:.
+      - List any style and formatting suggestions.
+      - Identify code smells.
+      - Check for security vulnerabilities.
+      - Suggest potential bug fixes.
+      - Offer alternative ways to write the same logic, including code snippets.
+      - List general warnings or suggestions.
+      - If a category has no items, provide an empty array [] for it. If a category is not applicable, omit it or provide an empty array.
+      - Ensure all strings within the JSON are properly escaped.
+      - DO NOT include any text outside this JSON structure.
+      `;
+
+      const userPrompt = `Analyze the following code snippet:\n\n\`\`\`\n${input.codeSnippet}\n\`\`\``;
+
+      const llmResponse = await generate({
+        model: 'googleai/gemini-1.5-flash-latest',
+        prompt: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+        ],
+        output: {
+            format: "json",
+            schema: ExplainCodeOutputSchema,
+        }
+      });
+      
+      const structuredOutput = llmResponse.output();
+
+      if (!structuredOutput) {
+        console.error("Gemini response was empty or not in the expected format.", llmResponse.usage());
+        throw new GenkitError({
+            status: 'INTERNAL',
+            message: 'AI model returned an empty or unparsable response.'
+        });
+      }
+      
+      const validationResult = ExplainCodeOutputSchema.safeParse(structuredOutput);
+      if (!validationResult.success) {
+        console.error("Gemini output failed Zod validation:", validationResult.error.issues, "Raw Output:", structuredOutput);
+        throw new GenkitError({
+            status: 'INTERNAL',
+            message: `AI model output did not match the expected structure: ${validationResult.error.message}`
+        });
+      }
+
+      return validationResult.data;
+
     } catch (error) {
-      // Log detailed error information on the server-side
-      console.error(`Error in explainCodeFlow for snippet: "${input.codeSnippet.substring(0, 50)}..."`, error);
-      // Re-throw the error so it can be caught by the calling component (UI)
-      // and displayed to the user. Add context to the error message.
-       if (error instanceof Error) {
-           throw new Error(`AI Agent Error: ${error.message}`); // Prepend context
-       }
-       throw new Error("An unexpected error occurred within the AI Agent flow.");
+      console.error(`Error in explainCodeGeminiFlow for snippet: "${input.codeSnippet.substring(0, 50)}..."`, error);
+      if (error instanceof GenkitError) throw error;
+      if (error instanceof Error) {
+        throw new GenkitError({
+            status: 'INTERNAL',
+            message: `AI Agent Error (Gemini): ${error.message}`,
+            cause: error,
+        });
+      }
+      throw new GenkitError({
+        status: 'UNKNOWN',
+        message: "An unexpected error occurred within the Gemini AI Agent flow."
+      });
     }
   }
 );
+

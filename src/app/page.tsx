@@ -6,11 +6,11 @@ import { CodeInput } from '@/components/code-input';
 import { CodeExplanationDisplay, type SensayInsight } from '@/components/code-explanation-display';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import type { CodeExplanation } from '@/services/github';
+import type { ExplainCodeOutput as CodeExplanation } from '@/ai/flows/explain-code'; // Updated type
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Info, Github, Settings } from 'lucide-react';
+import { Info, Github, Brain } from 'lucide-react'; // Changed Settings to Brain for AI
 import { getSensayCodeInsight, type SensayCodeInsightOutput } from '@/ai/flows/sensay-code-insight-flow';
-import { ThemeToggle } from '@/components/theme-toggle'; // Import ThemeToggle
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function Home() {
   const [explanationData, setExplanationData] = useState<CodeExplanation | null>(null);
@@ -20,7 +20,6 @@ export default function Home() {
   
   const [currentCodeSnippet, setCurrentCodeSnippet] = useState<string>('');
 
-  // State for Sensay Insights
   const [sensayInsight, setSensayInsight] = useState<SensayInsight | null>(null);
   const [isSensayLoading, setIsSensayLoading] = useState(false);
   const [sensayError, setSensayError] = useState<string | null>(null);
@@ -31,16 +30,15 @@ export default function Home() {
     loading: boolean,
     errorMsg: string | null,
     status: string | null,
-    code: string | null // Receive code snippet from CodeInput
+    code: string | null
   ) => {
     setExplanationData(data);
     setIsLoading(loading);
     setError(errorMsg);
     setAgentStatus(status);
     if (code) {
-      setCurrentCodeSnippet(code); // Store the code snippet
+      setCurrentCodeSnippet(code);
     }
-    // Clear Sensay insights when a new GitHub explanation is fetched
     setSensayInsight(null);
     setSensayError(null);
   };
@@ -64,7 +62,7 @@ export default function Home() {
 
     setIsSensayLoading(true);
     setSensayError(null);
-    setSensayInsight(null); // Clear previous insight
+    setSensayInsight(null);
 
     try {
       setAgentStatus("Requesting deeper insights from Sensay Wisdom Engine...");
