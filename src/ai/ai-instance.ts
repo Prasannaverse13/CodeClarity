@@ -38,3 +38,4 @@ export const ai = genkit({
   logLevel: 'debug', // Optional: 'info' or 'warn' for less verbose logging
   // enableTracing: true, // Optional: for more detailed tracing
 });
+
