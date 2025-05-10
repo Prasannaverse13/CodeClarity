@@ -120,10 +120,10 @@ const explainCodeFlow = ai.defineFlow(
       const userPrompt = `Analyze the following code snippet:\n\n\`\`\`\n${input.codeSnippet}\n\`\`\``;
 
       const llmResponse = await ai.generate({ 
-        model: 'googleai/gemini-2.0-flash-exp', // Updated model
-        prompt: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt }
+        model: 'googleai/gemini-2.0-flash-exp',
+        messages: [ // Use 'messages' field for chat-like interaction with roles
+            { role: 'system', content: [{ text: systemPrompt }] },
+            { role: 'user', content: [{ text: userPrompt }] }
         ],
         output: {
             format: "json",
@@ -175,7 +175,7 @@ const explainCodeFlow = ai.defineFlow(
         if (error.status === 'NOT_FOUND' && error.message.includes('Model') && error.message.includes('not found')) {
           throw new GenkitError({
             status: 'NOT_FOUND',
-            message: `The specified Google Gemini model was not found. This could be due to an incorrect model name or the API key not having access to it. Current model: 'googleai/gemini-2.0-flash-exp'. Original error: ${error.message}`, // Updated model name in error
+            message: `The specified Google Gemini model was not found. This could be due to an incorrect model name or the API key not having access to it. Current model: 'googleai/gemini-2.0-flash-exp'. Original error: ${error.message}`,
             cause: error,
           });
         }
