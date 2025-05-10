@@ -1,4 +1,3 @@
-
 'use server';
 
 /**
@@ -21,25 +20,37 @@ import { GenkitError } from 'genkit';
 // Define the input schema using Zod
 const ExplainCodeInputSchema = z.object({
   codeSnippet: z.string().describe('The code snippet to explain.'),
+  // Optional: Add lineNumber for error reporting if needed
+  // lineNumber: z.number().optional().describe('The line number where an error might be focused, if applicable.'),
 });
 export type ExplainCodeInput = z.infer<typeof ExplainCodeInputSchema>;
 
 // Define the output schema using Zod for Gemini's response.
+// This schema now includes fields based on the new feature requests.
 const ExplainCodeOutputSchema = z.object({
   language: z.string().optional().describe('The detected programming language. Defaults to "Unknown".'),
-  explanation_markdown: z.string().describe('The detailed explanation of the code, formatted in markdown.'),
-  warnings: z.array(z.string()).optional().describe('Potential warnings or general suggestions.'),
-  style_suggestions: z.array(z.string()).optional().describe('Suggestions for improving code style and formatting.'),
+  explanation_markdown: z.string().describe('### 🔍 What this code does:\n- Point 1\n- Point 2\n\n### 💡 Summary:\nSummary text.\n'),
+  warnings: z.array(z.string()).optional().describe('Potential warnings or general suggestions. Could include "This code contains a potential infinite loop."'),
+  style_suggestions: z.array(z.string()).optional().describe('Suggestions for improving code style and formatting. e.g., "Consider renaming variable x to something more meaningful."'),
   code_smells: z.array(z.string()).optional().describe('Identified code smells indicating potential design problems.'),
-  security_vulnerabilities: z.array(z.string()).optional().describe('Detected potential security vulnerabilities.'),
+  security_vulnerabilities: z.array(z.string()).optional().describe('Detected potential security vulnerabilities. e.g., "No input validation detected — risky in user-submitted forms."'),
   bug_suggestions: z.array(z.object({
     bug: z.string().describe('Potential bug description.'),
-    fix_suggestion: z.string().describe('How to fix the bug.'),
+    fix_suggestion: z.string().describe('How to fix the bug, including line number if applicable.'),
+    // line_number: z.number().optional().describe('Line number of the suggested bug fix.')
   })).optional().describe('Identified potential bugs and suggested fixes.'),
   alternative_suggestions: z.array(z.object({
     description: z.string().describe('Description of the alternative approach.'),
     code: z.string().describe('Alternative code snippet.'),
   })).optional().describe('Alternative ways to write the same logic.'),
+  // New fields based on user request
+  syntax_errors: z.array(z.object({
+    error: z.string().describe('Description of the syntax error.'),
+    line_number: z.number().optional().describe('Line number of the syntax error.'),
+  })).optional().describe('Detected syntax errors in real-time (simulated by LLM analysis).'),
+  // output_explanation: z.string().optional().describe('Step-by-step explanation of the code\'s output if it were run (simulated).'), // This is complex for LLM alone
+  // code_version_history: z.array(z.string()).optional().describe('Simulated version history or notable changes if applicable (LLM generated).'), // LLM cannot track actual history
+  // custom_prompt_suggestions: z.array(z.string()).optional().describe('Suggestions for custom prompts to further tweak or analyze the code.'), // Handled by general interaction flow
 });
 export type ExplainCodeOutput = z.infer<typeof ExplainCodeOutputSchema>;
 
@@ -67,29 +78,40 @@ const explainCodeFlow = ai.defineFlow(
       // If GOOGLE_GENAI_API_KEY is not set, the googleAI plugin won't be loaded,
       // and any attempt to use a googleai model will fail, which is handled below.
 
-      const systemPrompt = `You are an AI Code Analyzer. Your task is to analyze the provided code snippet.
+      const systemPrompt = `You are an AI Code Analyzer and Review Agent. Your task is to analyze the provided code snippet comprehensively.
       Provide the output in a VALID JSON format matching this structure:
       {
         "language": "Detected language (e.g., Python, JavaScript) or Unknown",
-        "explanation_markdown": "### 🔍 What this code does:\\n- Point 1\\n- Point 2\\n\\n### 💡 Summary:\\nSummary text.\\n",
-        "warnings": ["Optional general warning/suggestion 1", "Optional warning/suggestion 2"],
-        "style_suggestions": ["Optional style suggestion 1"],
-        "code_smells": ["Optional code smell 1"],
-        "security_vulnerabilities": ["Optional security vulnerability 1"],
+        "explanation_markdown": "### 🔍 What this code does:\\n- Step-by-step breakdown of logic.\\n- Function inputs/outputs.\\n- Conditional logic explained.\\n\\n### 💡 Summary:\\nMain purpose of the code.",
+        "warnings": ["Optional: Potential infinite loop.", "Optional general warning/suggestion 2"],
+        "style_suggestions": ["Optional: Consider renaming variable 'x' to 'userInput'.", "Optional style suggestion 2"],
+        "code_smells": ["Optional: Large function, consider refactoring.", "Optional code smell 2"],
+        "security_vulnerabilities": ["Optional: No input validation detected.", "Optional SQL injection risk if input is user-controlled and used in DB query."],
         "bug_suggestions": [
-          { "bug": "Potential bug description", "fix_suggestion": "How to fix it" }
+          { "bug": "Potential off-by-one error in loop condition.", "fix_suggestion": "Change loop condition from '<=' to '<'." }
         ],
         "alternative_suggestions": [
-          { "description": "Alternative 1 description", "code": "Alternative code snippet 1" }
+          { "description": "Using a map function for transformation instead of a for-loop.", "code": "const newArray = oldArray.map(item => item * 2);" }
+        ],
+        "syntax_errors": [
+          { "error": "Missing semicolon at end of statement.", "line_number": 5 }
         ]
       }
-      - Detect the programming language.
-      - Provide a step-by-step explanation of what the code does using markdown. Structure: ### 🔍 What this code does:, ### 💡 Summary:.
-      - List any style and formatting suggestions.
-      - Identify code smells.
-      - Check for security vulnerabilities.
-      - Suggest potential bug fixes.
-      - Offer alternative ways to write the same logic, including code snippets.
+      Your analysis should cover:
+      - Intent Confirmation: Briefly acknowledge the task (this will be part of your general tone).
+      - Language Detection: Detect the programming language.
+      - Readable Code Explanation:
+        - Start with "🔍 What this code does:" and provide a step-by-step breakdown.
+        - Include function definitions, inputs, outputs, and internal logic (steps, conditions).
+        - Follow with "💡 Summary:" explaining the main purpose.
+      - Agent Warnings & Suggestions: Identify unusual or risky patterns (e.g., "potential infinite loop", "consider renaming variable...").
+      - Real-Time Syntax Error Detection (Simulated): If obvious syntax errors are present, list them. Include line numbers if possible.
+      - Code Style & Formatting Suggestions: Provide advice on style.
+      - Code Smell Detection: Identify potential design problems.
+      - Security Vulnerability Checker: Highlight potential security flaws (e.g., "No input validation").
+      - AI-Powered Bug Fix Suggestions: If bugs are apparent, describe them and suggest fixes.
+      - Alternative Code Suggestions: Offer different ways to write the same logic, including code snippets.
+
       - If a category has no items, provide an empty array [] for it. If a category is not applicable, omit it or provide an empty array.
       - Ensure all strings within the JSON are properly escaped.
       - DO NOT include any text outside this JSON structure.
@@ -98,7 +120,7 @@ const explainCodeFlow = ai.defineFlow(
       const userPrompt = `Analyze the following code snippet:\n\n\`\`\`\n${input.codeSnippet}\n\`\`\``;
 
       const llmResponse = await ai.generate({ // Changed to ai.generate
-        model: 'googleai/gemini-1.5-flash-latest', // Ensure this model is appropriate and available
+        model: 'googleai/gemini-pro', // Changed model to gemini-pro
         prompt: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt }
@@ -117,7 +139,7 @@ const explainCodeFlow = ai.defineFlow(
         }
       });
       
-      const structuredOutput = llmResponse.output; // Changed to llmResponse.output
+      const structuredOutput = llmResponse.output; 
 
       if (!structuredOutput) {
         console.error("Gemini response was empty or not in the expected format.", llmResponse.usage());
@@ -141,8 +163,7 @@ const explainCodeFlow = ai.defineFlow(
     } catch (error) {
       console.error(`Error in explainCodeGeminiFlow for snippet: "${input.codeSnippet.substring(0, 50)}..."`, error);
       
-      if (error instanceof GenkitError) { // Re-throw Genkit errors directly
-        // Check if it's the specific API key error from googleAI plugin
+      if (error instanceof GenkitError) { 
         if (error.message.includes('API key not valid')) {
              throw new GenkitError({
                 status: 'UNAUTHENTICATED',
@@ -150,18 +171,25 @@ const explainCodeFlow = ai.defineFlow(
                 cause: error,
             });
         }
+        // If the error is about model not found, provide a more specific message.
+        if (error.status === 'NOT_FOUND' && error.message.includes('Model') && error.message.includes('not found')) {
+          throw new GenkitError({
+            status: 'NOT_FOUND',
+            message: `The specified Google Gemini model was not found. This could be due to an incorrect model name or the API key not having access to it. Current model: 'googleai/gemini-pro'. Original error: ${error.message}`,
+            cause: error,
+          });
+        }
         throw error;
       }
       
-      if (error instanceof Error && (error.message.includes('GOOGLE_GENAI_API_KEY') || error.message.includes('plugin is not configured') || error.message.includes('model googleai/gemini-1.5-flash-latest not found') )) {
+      if (error instanceof Error && (error.message.includes('GOOGLE_GENAI_API_KEY') || error.message.includes('plugin is not configured') )) {
         throw new GenkitError({
             status: 'FAILED_PRECONDITION',
-            message: 'Google AI plugin is not configured, API key is missing/invalid, or the model was not found. Please ensure GOOGLE_GENAI_API_KEY is set correctly in your .env file and the googleAI plugin is initialized.',
+            message: 'Google AI plugin is not configured, API key is missing/invalid. Please ensure GOOGLE_GENAI_API_KEY is set correctly in your .env file and the googleAI plugin is initialized.',
             cause: error,
         });
       }
       
-      // Catching the specific "generate is not a function" or similar TypeError
       if (error instanceof TypeError && error.message.includes('is not a function')) {
          throw new GenkitError({
             status: 'INTERNAL',
