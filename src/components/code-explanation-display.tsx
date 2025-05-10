@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Copy, AlertTriangle, Info, Brain, RefreshCw, BookOpen, Lightbulb, Bug, ShieldAlert, DraftingCompass, GitCompareArrows, Terminal, ExternalLink, Sparkles } from 'lucide-react';
+import { Copy, AlertTriangle, Info, Brain, RefreshCw, BookOpen, Lightbulb, Bug, ShieldAlert, DraftingCompass, GitCompareArrows, Terminal, ExternalLink, Sparkles, Palette, SearchCheck, TestTubeDiagonal } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -21,7 +21,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import type { ExplainCodeOutput as CodeExplanation } from '@/ai/flows/explain-code'; // Updated type
+import type { ExplainCodeOutput as CodeExplanation } from '@/ai/flows/explain-code';
 import { cn } from '@/lib/utils';
 
 export interface SensayInsight {
@@ -109,10 +109,11 @@ export function CodeExplanationDisplay({
 
   const handleExplainAnother = () => { onClear(); toast({ title: "Explain Another", description: "Ready for new input!" }); };
 
-  const renderSection = (title: string, icon: React.ReactNode, data: string[] | undefined | null, renderItem: (item: any, index: number) => React.ReactNode) => {
+  const renderSection = (title: string, icon: React.ReactNode, data: string[] | undefined | null, renderItem: (item: any, index: number) => React.ReactNode, defaultOpen = false) => {
     if (!data || data.length === 0) return null;
+    const value = title.toLowerCase().replace(/\s+/g, '-');
     return (
-      <AccordionItem value={title.toLowerCase().replace(/\s+/g, '-')}>
+      <AccordionItem value={value} key={value}>
         <AccordionTrigger className="text-base font-semibold hover:no-underline">
           <div className="flex items-center gap-2">
             {icon} {title} <Badge variant="outline" className="ml-2">{data.length}</Badge>
@@ -259,41 +260,48 @@ export function CodeExplanationDisplay({
           </CardContent>
         </Card>
 
-        <Accordion type="multiple" defaultValue={['general-warnings-suggestions']} className="w-full">
+        {/* Accordion for Suggestions and Analysis */}
+        <Accordion type="multiple" defaultValue={['general-warnings-suggestions', 'style-suggestions', 'code-smells', 'security-vulnerabilities', 'bug-suggestions', 'alternative-suggestions']} className="w-full">
+          {/* Warnings */}
           {renderSection("General Warnings & Suggestions", <AlertTriangle className="h-4 w-4 text-yellow-500 dark:text-yellow-400" />, explanationData.warnings, (warning, index) => (
             <li key={`warn-${index}`} className="border-l-2 border-yellow-500 dark:border-yellow-400 pl-3 py-1">{warning}</li>
+          ), true)}
+          {/* Style & Formatting Suggestions */}
+          {renderSection("Style & Formatting Suggestions", <Palette className="h-4 w-4 text-blue-500 dark:text-blue-400" />, explanationData.style_suggestions, (suggestion, index) => (
+            <li key={`style-${index}`} className="border-l-2 border-blue-500 dark:border-blue-400 pl-3 py-1">{suggestion}</li>
           ))}
-          {renderSection("Style & Formatting", <DraftingCompass className="h-4 w-4 text-blue-500" />, explanationData.style_suggestions, (suggestion, index) => (
-            <li key={`style-${index}`} className="border-l-2 border-blue-500 pl-3 py-1">{suggestion}</li>
-          ))}
-           {renderSection("Code Smells", <Bug className="h-4 w-4 text-orange-500 dark:text-orange-400" />, explanationData.code_smells, (smell, index) => (
+          {/* Code Smell Detection */}
+           {renderSection("Code Smell Detection", <SearchCheck className="h-4 w-4 text-orange-500 dark:text-orange-400" />, explanationData.code_smells, (smell, index) => (
             <li key={`smell-${index}`} className="border-l-2 border-orange-500 dark:border-orange-400 pl-3 py-1">{smell}</li>
           ))}
-           {renderSection("Security Check", <ShieldAlert className="h-4 w-4 text-red-600 dark:text-red-400" />, explanationData.security_vulnerabilities, (vuln, index) => (
+          {/* Security Vulnerability Checker */}
+           {renderSection("Security Vulnerability Checks", <ShieldAlert className="h-4 w-4 text-red-600 dark:text-red-400" />, explanationData.security_vulnerabilities, (vuln, index) => (
             <li key={`sec-${index}`} className="border-l-2 border-red-600 dark:border-red-400 pl-3 py-1">{vuln}</li>
           ))}
+          {/* AI-Powered Bug Fix Suggestions */}
           {explanationData.bug_suggestions && explanationData.bug_suggestions.length > 0 && (
              <AccordionItem value="bug-suggestions">
                <AccordionTrigger className="text-base font-semibold hover:no-underline">
                   <div className="flex items-center gap-2">
-                    <Bug className="h-4 w-4 text-pink-500 dark:text-pink-400" /> Bug Analysis <Badge variant="outline" className="ml-2">{explanationData.bug_suggestions.length}</Badge>
+                    <Bug className="h-4 w-4 text-pink-500 dark:text-pink-400" /> Potential Bug Identification & Fix Suggestions <Badge variant="outline" className="ml-2">{explanationData.bug_suggestions.length}</Badge>
                   </div>
                </AccordionTrigger>
                 <AccordionContent className="pt-2 pb-4 pl-2 pr-2 space-y-3">
                  {explanationData.bug_suggestions.map((bug, index) => (
                     <div key={`bug-${index}`} className="border-l-2 border-pink-500 dark:border-pink-400 pl-3 py-1 text-sm">
                        <p><strong>Potential Bug:</strong> {bug.bug}</p>
-                       <p className="mt-1"><strong>Suggestion:</strong> {bug.fix_suggestion}</p>
+                       <p className="mt-1"><strong>Fix Suggestion:</strong> {bug.fix_suggestion}</p>
                     </div>
                  ))}
                </AccordionContent>
              </AccordionItem>
           )}
+          {/* Alternative Code Suggestions */}
           {explanationData.alternative_suggestions && explanationData.alternative_suggestions.length > 0 && (
              <AccordionItem value="alternative-suggestions">
                <AccordionTrigger className="text-base font-semibold hover:no-underline">
                  <div className="flex items-center gap-2">
-                   <GitCompareArrows className="h-4 w-4 text-indigo-500 dark:text-indigo-400" /> Alternative Approaches <Badge variant="outline" className="ml-2">{explanationData.alternative_suggestions.length}</Badge>
+                   <GitCompareArrows className="h-4 w-4 text-indigo-500 dark:text-indigo-400" /> Alternative Code Approaches <Badge variant="outline" className="ml-2">{explanationData.alternative_suggestions.length}</Badge>
                  </div>
                </AccordionTrigger>
                <AccordionContent className="pt-2 pb-4 pl-2 pr-2 space-y-4">
@@ -395,3 +403,4 @@ export function CodeExplanationDisplay({
     </div>
   );
 }
+

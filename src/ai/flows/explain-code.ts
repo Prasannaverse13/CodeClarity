@@ -32,25 +32,21 @@ const ExplainCodeOutputSchema = z.object({
   explanation_markdown: z.string().describe('### 🔍 What this code does:\n- Point 1\n- Point 2\n\n### 💡 Summary:\nSummary text.\n'),
   warnings: z.array(z.string()).optional().describe('Potential warnings or general suggestions. Could include "This code contains a potential infinite loop."'),
   style_suggestions: z.array(z.string()).optional().describe('Suggestions for improving code style and formatting. e.g., "Consider renaming variable x to something more meaningful."'),
-  code_smells: z.array(z.string()).optional().describe('Identified code smells indicating potential design problems.'),
-  security_vulnerabilities: z.array(z.string()).optional().describe('Detected potential security vulnerabilities. e.g., "No input validation detected — risky in user-submitted forms."'),
+  code_smells: z.array(z.string()).optional().describe('Identified code smells indicating potential design problems. e.g., "Function is too long, consider breaking it down."'),
+  security_vulnerabilities: z.array(z.string()).optional().describe('Detected potential security vulnerabilities. e.g., "No input validation detected — risky in user-submitted forms." or "Potential for SQL injection if input is not sanitized."'),
   bug_suggestions: z.array(z.object({
-    bug: z.string().describe('Potential bug description.'),
-    fix_suggestion: z.string().describe('How to fix the bug, including line number if applicable.'),
+    bug: z.string().describe('Potential bug description. e.g., "Possible null pointer dereference if object is not initialized."'),
+    fix_suggestion: z.string().describe('How to fix the bug, including line number if applicable. e.g., "Add a null check before accessing object properties."'),
     // line_number: z.number().optional().describe('Line number of the suggested bug fix.')
   })).optional().describe('Identified potential bugs and suggested fixes.'),
   alternative_suggestions: z.array(z.object({
-    description: z.string().describe('Description of the alternative approach.'),
-    code: z.string().describe('Alternative code snippet.'),
+    description: z.string().describe('Description of the alternative approach. e.g., "Using a ternary operator for concise conditional assignment."'),
+    code: z.string().describe('Alternative code snippet. e.g., "const result = condition ? value1 : value2;"'),
   })).optional().describe('Alternative ways to write the same logic.'),
-  // New fields based on user request
   syntax_errors: z.array(z.object({
     error: z.string().describe('Description of the syntax error.'),
     line_number: z.number().optional().describe('Line number of the syntax error.'),
   })).optional().describe('Detected syntax errors in real-time (simulated by LLM analysis).'),
-  // output_explanation: z.string().optional().describe('Step-by-step explanation of the code\'s output if it were run (simulated).'), // This is complex for LLM alone
-  // code_version_history: z.array(z.string()).optional().describe('Simulated version history or notable changes if applicable (LLM generated).'), // LLM cannot track actual history
-  // custom_prompt_suggestions: z.array(z.string()).optional().describe('Suggestions for custom prompts to further tweak or analyze the code.'), // Handled by general interaction flow
 });
 export type ExplainCodeOutput = z.infer<typeof ExplainCodeOutputSchema>;
 
@@ -83,36 +79,38 @@ const explainCodeFlow = ai.defineFlow(
       {
         "language": "Detected language (e.g., Python, JavaScript) or Unknown",
         "explanation_markdown": "### 🔍 What this code does:\\n- Step-by-step breakdown of logic.\\n- Function inputs/outputs.\\n- Conditional logic explained.\\n\\n### 💡 Summary:\\nMain purpose of the code.",
-        "warnings": ["Optional: Potential infinite loop.", "Optional general warning/suggestion 2"],
-        "style_suggestions": ["Optional: Consider renaming variable 'x' to 'userInput'.", "Optional style suggestion 2"],
-        "code_smells": ["Optional: Large function, consider refactoring.", "Optional code smell 2"],
-        "security_vulnerabilities": ["Optional: No input validation detected.", "Optional SQL injection risk if input is user-controlled and used in DB query."],
+        "warnings": ["Optional: General warning 1.", "Optional general warning 2"],
+        "style_suggestions": ["Optional: Style suggestion 1.", "Optional: Formatting advice 2"],
+        "code_smells": ["Optional: Identified code smell 1 (e.g., Long method).", "Optional code smell 2"],
+        "security_vulnerabilities": ["Optional: Security vulnerability 1 (e.g., XSS risk).", "Optional vulnerability 2 (e.g., Hardcoded secret)."],
         "bug_suggestions": [
-          { "bug": "Potential off-by-one error in loop condition.", "fix_suggestion": "Change loop condition from '<=' to '<'." }
+          { "bug": "Potential bug description 1.", "fix_suggestion": "Suggested fix for bug 1." },
+          { "bug": "Potential bug description 2.", "fix_suggestion": "Suggested fix for bug 2." }
         ],
         "alternative_suggestions": [
-          { "description": "Using a map function for transformation instead of a for-loop.", "code": "const newArray = oldArray.map(item => item * 2);" }
+          { "description": "Alternative approach description 1.", "code": "Alternative code snippet 1;" },
+          { "description": "Alternative approach description 2.", "code": "Alternative code snippet 2;" }
         ],
         "syntax_errors": [
           { "error": "Missing semicolon at end of statement.", "line_number": 5 }
         ]
       }
-      Your analysis should cover:
+      Your analysis should cover ALL of the following categories:
       - Intent Confirmation: Briefly acknowledge the task (this will be part of your general tone).
       - Language Detection: Detect the programming language.
       - Readable Code Explanation:
         - Start with "🔍 What this code does:" and provide a step-by-step breakdown.
         - Include function definitions, inputs, outputs, and internal logic (steps, conditions).
         - Follow with "💡 Summary:" explaining the main purpose.
-      - Agent Warnings & Suggestions: Identify unusual or risky patterns (e.g., "potential infinite loop", "consider renaming variable...").
+      - General Warnings & Suggestions: Identify unusual or risky patterns or offer general advice.
+      - Style & Formatting Suggestions: Provide advice on improving code style and formatting.
+      - Code Smell Detection: Identify potential design problems or anti-patterns.
+      - Security Vulnerability Checks: Highlight potential security flaws (e.g., XSS, SQLi, hardcoded secrets, no input validation).
+      - Potential Bug Identification & Fix Suggestions: If bugs are apparent, describe them and suggest fixes. Include line numbers if possible.
+      - Alternative Code Approaches: Offer different ways to write the same logic, including code snippets.
       - Real-Time Syntax Error Detection (Simulated): If obvious syntax errors are present, list them. Include line numbers if possible.
-      - Code Style & Formatting Suggestions: Provide advice on style.
-      - Code Smell Detection: Identify potential design problems.
-      - Security Vulnerability Checker: Highlight potential security flaws (e.g., "No input validation").
-      - AI-Powered Bug Fix Suggestions: If bugs are apparent, describe them and suggest fixes.
-      - Alternative Code Suggestions: Offer different ways to write the same logic, including code snippets.
 
-      - If a category has no items, provide an empty array [] for it. If a category is not applicable, omit it or provide an empty array.
+      - If a category has no items, provide an empty array [] for it. DO NOT omit any category.
       - Ensure all strings within the JSON are properly escaped.
       - DO NOT include any text outside this JSON structure.
       `;
@@ -121,7 +119,7 @@ const explainCodeFlow = ai.defineFlow(
 
       const llmResponse = await ai.generate({ 
         model: 'googleai/gemini-2.0-flash-exp',
-        messages: [ // Use 'messages' field for chat-like interaction with roles
+        messages: [ 
             { role: 'system', content: [{ text: systemPrompt }] },
             { role: 'user', content: [{ text: userPrompt }] }
         ],
@@ -149,9 +147,56 @@ const explainCodeFlow = ai.defineFlow(
         });
       }
       
-      const validationResult = ExplainCodeOutputSchema.safeParse(structuredOutput);
+      // Attempt to parse, even if the model might not perfectly adhere.
+      // Zod will validate against the schema.
+      let parsedOutput: ExplainCodeOutput;
+      try {
+        // If the output is already an object (because Genkit parsed it based on output.format = "json")
+        if (typeof structuredOutput === 'object' && structuredOutput !== null) {
+            parsedOutput = structuredOutput as ExplainCodeOutput; // Cast, Zod will validate next
+        } else if (typeof structuredOutput === 'string') {
+            // This case might occur if Genkit's auto-parsing based on format="json" isn't perfect
+            // or if the LLM wraps the JSON in something unexpected.
+            // Try to extract JSON from potential markdown code blocks.
+            const jsonMatch = structuredOutput.match(/```json\n([\s\S]*?)\n```/);
+            if (jsonMatch && jsonMatch[1]) {
+                parsedOutput = JSON.parse(jsonMatch[1]);
+            } else {
+                 // Assume it's a plain JSON string if no markdown block found
+                parsedOutput = JSON.parse(structuredOutput);
+            }
+        } else {
+            throw new Error("Unexpected output format from LLM. Expected object or JSON string.");
+        }
+      } catch (parseError) {
+        console.error("Failed to parse Gemini output as JSON:", parseError, "Raw Output:", structuredOutput);
+        throw new GenkitError({
+            status: 'INTERNAL',
+            message: `AI model output was not valid JSON. ${ (parseError as Error).message }`
+        });
+      }
+      
+      const validationResult = ExplainCodeOutputSchema.safeParse(parsedOutput);
       if (!validationResult.success) {
-        console.error("Gemini output failed Zod validation:", validationResult.error.issues, "Raw Output:", structuredOutput);
+        console.error("Gemini output failed Zod validation:", validationResult.error.issues, "Parsed Output:", parsedOutput);
+        // Try to return the partially valid data if explanation_markdown is present, otherwise throw
+        if (parsedOutput.explanation_markdown) {
+            toast({
+                title: "Partial Analysis",
+                description: "AI model output had some inconsistencies but core explanation is available. Some sections might be missing.",
+                variant: "default" // Or a custom "warning" variant
+            });
+            // Fill missing array fields with empty arrays to prevent crashes
+            const partialData = validationResult.error.issues.reduce((acc, issue) => {
+                const path = issue.path.join('.');
+                if (ExplainCodeOutputSchema.shape.hasOwnProperty(path) && Array.isArray((ExplainCodeOutputSchema.shape as any)[path]._def.type)) {
+                    (acc as any)[path] = [];
+                }
+                return acc;
+            }, { ...parsedOutput });
+             return ExplainCodeOutputSchema.parse(partialData); // Re-parse with defaults
+        }
+
         throw new GenkitError({
             status: 'INTERNAL',
             message: `AI model output did not match the expected structure: ${validationResult.error.message}`
@@ -221,3 +266,9 @@ const explainCodeFlow = ai.defineFlow(
     }
   }
 );
+
+// Helper function for toast (cannot be used directly in 'use server' top-level)
+// This is a placeholder. Actual toast calls should be on the client-side.
+function toast(options: { title: string; description: string; variant?: string }) {
+    console.warn(`Server-side toast attempt: ${options.title} - ${options.description}`);
+}
