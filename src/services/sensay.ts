@@ -116,6 +116,9 @@ export async function getSensayInteraction(
   } catch (error) {
     console.error('Error interacting with Sensay API:', error);
     if (error instanceof Error) {
+      if (error.message.toLowerCase().includes('failed to fetch')) {
+        throw new Error(`Sensay Service Error: Failed to connect to Sensay API. Please check your internet connection, VPN/proxy settings, and ensure the SENSAY_API_KEY is valid. Original: ${error.message}`);
+      }
       throw new Error(`Sensay Service Error: ${error.message}`);
     } else {
       throw new Error('An unknown error occurred in the Sensay service.');

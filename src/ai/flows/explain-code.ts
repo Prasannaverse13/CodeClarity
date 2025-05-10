@@ -189,6 +189,14 @@ const explainCodeFlow = ai.defineFlow(
             cause: error,
         });
       }
+
+      if (error instanceof Error && error.message.toLowerCase().includes('failed to fetch')) {
+        throw new GenkitError({
+            status: 'UNAVAILABLE',
+            message: 'Failed to connect to the AI service (Gemini). Please check your internet connection, VPN/proxy settings, and ensure the GOOGLE_GENAI_API_KEY is valid and has access to the model.',
+            cause: error,
+        });
+      }
       
       if (error instanceof TypeError && error.message.includes('is not a function')) {
          throw new GenkitError({
