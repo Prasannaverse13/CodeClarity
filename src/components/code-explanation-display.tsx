@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -7,10 +6,9 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Copy, AlertTriangle, Info, Brain, RefreshCw, BookOpen, Lightbulb, Bug, ShieldAlert, DraftingCompass, GitCompareArrows, Terminal, ExternalLink, Sparkles, Palette, SearchCheck, TestTubeDiagonal } from 'lucide-react';
+import { Copy, AlertTriangle, Info, Brain, RefreshCw, BookOpen, Lightbulb, Bug, ShieldAlert, DraftingCompass, GitCompareArrows, Terminal, ExternalLink, Sparkles, Palette, SearchCheck, TestTubeDiagonal, FileWarning } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -109,37 +107,49 @@ export function CodeExplanationDisplay({
 
   const handleExplainAnother = () => { onClear(); toast({ title: "Explain Another", description: "Ready for new input!" }); };
 
-  const renderSection = (title: string, icon: React.ReactNode, data: string[] | undefined | null, renderItem: (item: any, index: number) => React.ReactNode, defaultOpen = false) => {
+  const renderCardSection = <T,>(
+    title: string,
+    icon: React.ReactNode,
+    data: T[] | undefined | null,
+    renderItem: (item: T, index: number) => React.ReactNode,
+    sectionKey: string
+  ) => {
     if (!data || data.length === 0) return null;
-    const value = title.toLowerCase().replace(/\s+/g, '-');
+
     return (
-      <AccordionItem value={value} key={value}>
-        <AccordionTrigger className="text-base font-semibold hover:no-underline">
-          <div className="flex items-center gap-2">
+      <Card key={sectionKey} className="mb-4 shadow-md">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
             {icon} {title} <Badge variant="outline" className="ml-2">{data.length}</Badge>
-          </div>
-        </AccordionTrigger>
-        <AccordionContent className="pt-2 pb-4 pl-2 pr-2">
-          <ul className="list-none space-y-2 text-sm">
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ul className="list-none space-y-3 text-sm">
             {data.map(renderItem)}
           </ul>
-        </AccordionContent>
-      </AccordionItem>
+        </CardContent>
+      </Card>
     );
   };
+
 
   const renderSensayContent = () => {
     if (isSensayLoading) {
       return (
-        <div className="space-y-2 p-3 border border-dashed border-muted rounded-md mt-6">
-          <div className="flex items-center space-x-2 text-muted-foreground">
-            <Sparkles className="h-5 w-5 animate-pulse text-purple-500" />
-            <span>Sensay Wisdom Engine is processing...</span>
-          </div>
-          <Skeleton className="h-4 w-3/4" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-5/6" />
-        </div>
+        <Card className="mt-6 border-purple-500/50 shadow-md">
+           <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg text-purple-600 dark:text-purple-400">
+              <Sparkles className="h-5 w-5 animate-pulse" /> Sensay Wisdom Engine Processing...
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 p-3">
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-5/6" />
+            </div>
+          </CardContent>
+        </Card>
       );
     }
     if (sensayError) {
@@ -153,7 +163,7 @@ export function CodeExplanationDisplay({
     }
     if (sensayInsight) {
       return (
-        <Card className="mt-6 border-purple-500/50">
+        <Card className="mt-6 border-purple-500/50 shadow-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg text-purple-600 dark:text-purple-400">
               <Sparkles className="h-5 w-5" /> Sensay Wisdom Insights
@@ -227,16 +237,18 @@ export function CodeExplanationDisplay({
     const geminiExplanationContent = explanationData && (
       <div className="space-y-6">
         {explanationData.language && (
-          <div>
-            <Badge variant="secondary" className="text-sm">
+          <div className="mb-4">
+            <Badge variant="secondary" className="text-sm px-3 py-1 shadow">
                <Terminal className="mr-1.5 h-3.5 w-3.5"/> Language: {explanationData.language}
             </Badge>
           </div>
         )}
-        <Card>
+
+        {/* Comprehensive Analysis (Main Explanation) */}
+        <Card className="shadow-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
-              <Brain className="h-5 w-5 text-green-500"/> Gemini Model Explanation
+              <Brain className="h-5 w-5 text-green-500"/> Comprehensive Analysis
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -254,77 +266,65 @@ export function CodeExplanationDisplay({
                     <ReactMarkdown>{explanationData.explanation_markdown}</ReactMarkdown>
                 </div>
             </div>
-             <Button onClick={() => handleCopy(explanationData.explanation_markdown, "Explanation")} variant="ghost" size="sm" className="mt-2 text-xs text-muted-foreground hover:text-primary">
-                <Copy className="mr-1.5 h-3 w-3" /> Copy Explanation
+             <Button onClick={() => handleCopy(explanationData.explanation_markdown, "Comprehensive Analysis")} variant="ghost" size="sm" className="mt-2 text-xs text-muted-foreground hover:text-primary">
+                <Copy className="mr-1.5 h-3 w-3" /> Copy Analysis
              </Button>
           </CardContent>
         </Card>
 
-        {/* Accordion for Suggestions and Analysis */}
-        <Accordion type="multiple" defaultValue={['general-warnings-suggestions', 'style-suggestions', 'code-smells', 'security-vulnerabilities', 'bug-suggestions', 'alternative-suggestions']} className="w-full">
-          {/* Warnings */}
-          {renderSection("General Warnings & Suggestions", <AlertTriangle className="h-4 w-4 text-yellow-500 dark:text-yellow-400" />, explanationData.warnings, (warning, index) => (
-            <li key={`warn-${index}`} className="border-l-2 border-yellow-500 dark:border-yellow-400 pl-3 py-1">{warning}</li>
-          ), true)}
-          {/* Style & Formatting Suggestions */}
-          {renderSection("Style & Formatting Suggestions", <Palette className="h-4 w-4 text-blue-500 dark:text-blue-400" />, explanationData.style_suggestions, (suggestion, index) => (
-            <li key={`style-${index}`} className="border-l-2 border-blue-500 dark:border-blue-400 pl-3 py-1">{suggestion}</li>
-          ))}
-          {/* Code Smell Detection */}
-           {renderSection("Code Smell Detection", <SearchCheck className="h-4 w-4 text-orange-500 dark:text-orange-400" />, explanationData.code_smells, (smell, index) => (
-            <li key={`smell-${index}`} className="border-l-2 border-orange-500 dark:border-orange-400 pl-3 py-1">{smell}</li>
-          ))}
-          {/* Security Vulnerability Checker */}
-           {renderSection("Security Vulnerability Checks", <ShieldAlert className="h-4 w-4 text-red-600 dark:text-red-400" />, explanationData.security_vulnerabilities, (vuln, index) => (
-            <li key={`sec-${index}`} className="border-l-2 border-red-600 dark:border-red-400 pl-3 py-1">{vuln}</li>
-          ))}
-          {/* AI-Powered Bug Fix Suggestions */}
-          {explanationData.bug_suggestions && explanationData.bug_suggestions.length > 0 && (
-             <AccordionItem value="bug-suggestions">
-               <AccordionTrigger className="text-base font-semibold hover:no-underline">
-                  <div className="flex items-center gap-2">
-                    <Bug className="h-4 w-4 text-pink-500 dark:text-pink-400" /> Potential Bug Identification & Fix Suggestions <Badge variant="outline" className="ml-2">{explanationData.bug_suggestions.length}</Badge>
-                  </div>
-               </AccordionTrigger>
-                <AccordionContent className="pt-2 pb-4 pl-2 pr-2 space-y-3">
-                 {explanationData.bug_suggestions.map((bug, index) => (
-                    <div key={`bug-${index}`} className="border-l-2 border-pink-500 dark:border-pink-400 pl-3 py-1 text-sm">
-                       <p><strong>Potential Bug:</strong> {bug.bug}</p>
-                       <p className="mt-1"><strong>Fix Suggestion:</strong> {bug.fix_suggestion}</p>
-                    </div>
-                 ))}
-               </AccordionContent>
-             </AccordionItem>
-          )}
-          {/* Alternative Code Suggestions */}
-          {explanationData.alternative_suggestions && explanationData.alternative_suggestions.length > 0 && (
-             <AccordionItem value="alternative-suggestions">
-               <AccordionTrigger className="text-base font-semibold hover:no-underline">
-                 <div className="flex items-center gap-2">
-                   <GitCompareArrows className="h-4 w-4 text-indigo-500 dark:text-indigo-400" /> Alternative Code Approaches <Badge variant="outline" className="ml-2">{explanationData.alternative_suggestions.length}</Badge>
-                 </div>
-               </AccordionTrigger>
-               <AccordionContent className="pt-2 pb-4 pl-2 pr-2 space-y-4">
-                 {explanationData.alternative_suggestions.map((alt, index) => (
-                   <div key={`alt-${index}`} className="border-l-2 border-indigo-500 dark:border-indigo-400 pl-3 py-1 text-sm">
-                     <p><strong>Alternative:</strong> {alt.description}</p>
-                     <div className="mt-2">
-                       <pre className="bg-muted p-2 rounded text-xs font-mono overflow-x-auto relative group/alt-code">
-                         <code>{alt.code}</code>
-                         <Button
-                            onClick={() => handleCopy(alt.code, `Alternative code ${index + 1}`)}
-                            variant="ghost" size="icon"
-                            className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover/alt-code:opacity-100 transition-opacity"
-                            aria-label="Copy alternative code"
-                         > <Copy className="h-3.5 w-3.5" /> </Button>
-                       </pre>
-                     </div>
-                   </div>
-                 ))}
-               </AccordionContent>
-             </AccordionItem>
-          )}
-        </Accordion>
+        {/* Style & Formatting Suggestions */}
+        {renderCardSection("Style & Formatting Suggestions", <Palette className="h-5 w-5 text-blue-500 dark:text-blue-400" />, explanationData.style_suggestions, (suggestion, index) => (
+          <li key={`style-${index}`} className="border-l-2 border-blue-500 dark:border-blue-400 pl-3 py-1.5 bg-blue-500/5 dark:bg-blue-400/10 rounded-r-md">{suggestion}</li>
+        ), "style-suggestions")}
+
+        {/* Code Smell Detection */}
+        {renderCardSection("Code Smell Detection", <SearchCheck className="h-5 w-5 text-orange-500 dark:text-orange-400" />, explanationData.code_smells, (smell, index) => (
+          <li key={`smell-${index}`} className="border-l-2 border-orange-500 dark:border-orange-400 pl-3 py-1.5 bg-orange-500/5 dark:bg-orange-400/10 rounded-r-md">{smell}</li>
+        ), "code-smells")}
+
+        {/* Security Vulnerability Checks */}
+        {renderCardSection("Security Vulnerability Checks", <ShieldAlert className="h-5 w-5 text-red-600 dark:text-red-500" />, explanationData.security_vulnerabilities, (vuln, index) => (
+          <li key={`sec-${index}`} className="border-l-2 border-red-600 dark:border-red-500 pl-3 py-1.5 bg-red-600/5 dark:bg-red-500/10 rounded-r-md">{vuln}</li>
+        ), "security-vulnerabilities")}
+
+        {/* Potential Bug Identification & Fix Suggestions */}
+        {renderCardSection("Potential Bug Identification & Fix Suggestions", <Bug className="h-5 w-5 text-pink-500 dark:text-pink-400" />, explanationData.bug_suggestions, (bug, index) => (
+          <li key={`bug-${index}`} className="border-l-2 border-pink-500 dark:border-pink-400 pl-3 py-2 bg-pink-500/5 dark:bg-pink-400/10 rounded-r-md">
+             <p><strong>Potential Bug:</strong> {bug.bug}</p>
+             <p className="mt-1"><strong>Fix Suggestion:</strong> {bug.fix_suggestion}</p>
+          </li>
+        ), "bug-suggestions")}
+        
+        {/* Alternative Code Approaches */}
+        {renderCardSection("Alternative Code Approaches", <GitCompareArrows className="h-5 w-5 text-indigo-500 dark:text-indigo-400" />, explanationData.alternative_suggestions, (alt, index) => (
+          <li key={`alt-${index}`} className="border-l-2 border-indigo-500 dark:border-indigo-400 pl-3 py-2 bg-indigo-500/5 dark:bg-indigo-400/10 rounded-r-md">
+            <p className="mb-1"><strong>Alternative:</strong> {alt.description}</p>
+            <div className="mt-1">
+              <pre className="bg-muted/70 dark:bg-muted p-2 rounded text-xs font-mono overflow-x-auto relative group/alt-code">
+                <code>{alt.code}</code>
+                <Button
+                   onClick={() => handleCopy(alt.code, `Alternative code ${index + 1}`)}
+                   variant="ghost" size="icon"
+                   className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover/alt-code:opacity-100 transition-opacity"
+                   aria-label="Copy alternative code"
+                > <Copy className="h-3.5 w-3.5" /> </Button>
+              </pre>
+            </div>
+          </li>
+        ), "alternative-suggestions")}
+
+        {/* General Warnings & Suggestions */}
+        {renderCardSection("General Warnings & Suggestions", <AlertTriangle className="h-5 w-5 text-yellow-500 dark:text-yellow-400" />, explanationData.warnings, (warning, index) => (
+          <li key={`warn-${index}`} className="border-l-2 border-yellow-500 dark:border-yellow-400 pl-3 py-1.5 bg-yellow-500/5 dark:bg-yellow-400/10 rounded-r-md">{warning}</li>
+        ), "warnings")}
+
+        {/* Syntax Errors */}
+        {renderCardSection("Syntax Errors", <FileWarning className="h-5 w-5 text-destructive" />, explanationData.syntax_errors, (err, index) => (
+            <li key={`syntax-${index}`} className="border-l-2 border-destructive pl-3 py-1.5 bg-destructive/5 dark:bg-destructive/10 rounded-r-md">
+                <p>{err.error} {err.line_number && `(around line ${err.line_number})`}</p>
+            </li>
+        ), "syntax-errors")}
+
       </div>
     );
 
