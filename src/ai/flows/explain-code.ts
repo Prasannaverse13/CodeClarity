@@ -119,8 +119,8 @@ const explainCodeFlow = ai.defineFlow(
 
       const userPrompt = `Analyze the following code snippet:\n\n\`\`\`\n${input.codeSnippet}\n\`\`\``;
 
-      const llmResponse = await ai.generate({ // Changed to ai.generate
-        model: 'googleai/gemini-pro', // Changed model to gemini-pro
+      const llmResponse = await ai.generate({ 
+        model: 'googleai/gemini-1.5-flash-latest', 
         prompt: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt }
@@ -175,7 +175,7 @@ const explainCodeFlow = ai.defineFlow(
         if (error.status === 'NOT_FOUND' && error.message.includes('Model') && error.message.includes('not found')) {
           throw new GenkitError({
             status: 'NOT_FOUND',
-            message: `The specified Google Gemini model was not found. This could be due to an incorrect model name or the API key not having access to it. Current model: 'googleai/gemini-pro'. Original error: ${error.message}`,
+            message: `The specified Google Gemini model was not found. This could be due to an incorrect model name or the API key not having access to it. Current model: 'googleai/gemini-1.5-flash-latest'. Original error: ${error.message}`,
             cause: error,
           });
         }
@@ -214,3 +214,8 @@ const explainCodeFlow = ai.defineFlow(
   }
 );
 
+// Ensure no non-async functions or plain objects are exported if 'use server' is at the top.
+// If you need to export types, ensure they are just type exports.
+// export type { ExplainCodeInput, ExplainCodeOutput }; // This is fine
+// Do not export ExplainCodeInputSchema or ExplainCodeOutputSchema directly if 'use server' is top-level.
+// They can be kept internal to this module or exported from a different, non-"use server" module.
