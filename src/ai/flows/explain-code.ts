@@ -14,7 +14,7 @@
 
 import { ai } from '@/ai/ai-instance';
 import { z } from 'genkit';
-import { generate } from 'genkit';
+// import { generate } from 'genkit'; // Removed, ai.generate will be used
 import { GenkitError } from 'genkit';
 
 
@@ -66,7 +66,6 @@ const explainCodeFlow = ai.defineFlow(
       // The ai-instance.ts already handles conditional plugin initialization.
       // If GOOGLE_GENAI_API_KEY is not set, the googleAI plugin won't be loaded,
       // and any attempt to use a googleai model will fail, which is handled below.
-      // The check `!ai.registry.plugin('googleai')` is from Genkit v0.x and will cause an error.
 
       const systemPrompt = `You are an AI Code Analyzer. Your task is to analyze the provided code snippet.
       Provide the output in a VALID JSON format matching this structure:
@@ -91,7 +90,6 @@ const explainCodeFlow = ai.defineFlow(
       - Check for security vulnerabilities.
       - Suggest potential bug fixes.
       - Offer alternative ways to write the same logic, including code snippets.
-      - List general warnings or suggestions.
       - If a category has no items, provide an empty array [] for it. If a category is not applicable, omit it or provide an empty array.
       - Ensure all strings within the JSON are properly escaped.
       - DO NOT include any text outside this JSON structure.
@@ -99,7 +97,7 @@ const explainCodeFlow = ai.defineFlow(
 
       const userPrompt = `Analyze the following code snippet:\n\n\`\`\`\n${input.codeSnippet}\n\`\`\``;
 
-      const llmResponse = await generate({
+      const llmResponse = await ai.generate({ // Changed to ai.generate
         model: 'googleai/gemini-1.5-flash-latest', // Ensure this model is appropriate and available
         prompt: [
             { role: 'system', content: systemPrompt },
@@ -109,17 +107,17 @@ const explainCodeFlow = ai.defineFlow(
             format: "json",
             schema: ExplainCodeOutputSchema,
         },
-        config: { // Added safety settings to be less restrictive for code analysis
+        config: { 
             safetySettings: [
               { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
-              { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' }, // Relaxed slightly
+              { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
               { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
-              { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' }, // Relaxed slightly
+              { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
             ],
         }
       });
       
-      const structuredOutput = llmResponse.output();
+      const structuredOutput = llmResponse.output; // Changed to llmResponse.output
 
       if (!structuredOutput) {
         console.error("Gemini response was empty or not in the expected format.", llmResponse.usage());
@@ -142,13 +140,32 @@ const explainCodeFlow = ai.defineFlow(
 
     } catch (error) {
       console.error(`Error in explainCodeGeminiFlow for snippet: "${input.codeSnippet.substring(0, 50)}..."`, error);
-      if (error instanceof GenkitError) throw error; // Re-throw Genkit errors directly
       
-      // Check if the error message indicates a missing API key or plugin issue
-      if (error instanceof Error && (error.message.includes('GOOGLE_GENAI_API_KEY') || error.message.includes('plugin is not configured'))) {
+      if (error instanceof GenkitError) { // Re-throw Genkit errors directly
+        // Check if it's the specific API key error from googleAI plugin
+        if (error.message.includes('API key not valid')) {
+             throw new GenkitError({
+                status: 'UNAUTHENTICATED',
+                message: 'Google Gemini API Key is invalid or not authorized. Please check your GOOGLE_GENAI_API_KEY.',
+                cause: error,
+            });
+        }
+        throw error;
+      }
+      
+      if (error instanceof Error && (error.message.includes('GOOGLE_GENAI_API_KEY') || error.message.includes('plugin is not configured') || error.message.includes('model googleai/gemini-1.5-flash-latest not found') )) {
         throw new GenkitError({
             status: 'FAILED_PRECONDITION',
-            message: 'Google AI plugin is not configured or API key is missing. Please ensure GOOGLE_GENAI_API_KEY is set in your .env file.',
+            message: 'Google AI plugin is not configured, API key is missing/invalid, or the model was not found. Please ensure GOOGLE_GENAI_API_KEY is set correctly in your .env file and the googleAI plugin is initialized.',
+            cause: error,
+        });
+      }
+      
+      // Catching the specific "generate is not a function" or similar TypeError
+      if (error instanceof TypeError && error.message.includes('is not a function')) {
+         throw new GenkitError({
+            status: 'INTERNAL',
+            message: `AI Agent Error (Gemini): A Genkit function was called incorrectly. Original error: ${error.message}`,
             cause: error,
         });
       }
@@ -160,6 +177,7 @@ const explainCodeFlow = ai.defineFlow(
             cause: error,
         });
       }
+
       throw new GenkitError({
         status: 'UNKNOWN',
         message: "An unexpected error occurred within the Gemini AI Agent flow."
@@ -167,3 +185,4 @@ const explainCodeFlow = ai.defineFlow(
     }
   }
 );
+
