@@ -223,3 +223,4 @@ Refer to the [Sensay Documentation](https://docs.sensay.io/) for detailed instru
 
 *   Yes, the core AI explanation feature is an agent built with TypeScript (Next.js) and orchestrated using Genkit to interact with the Google Gemini model. The "Explain Code" functionality in `src/ai/flows/explain-code.ts` acts as an AI agent that receives code, processes it via an LLM, and returns a structured analysis.
 *   The optional Sensay integration further enhances this by adding another layer of agent-like conversational capabilities.
+
