@@ -3,13 +3,12 @@
 
 import React, { useState, useCallback } from 'react';
 import { CodeInput } from '@/components/code-input';
-import { CodeExplanationDisplay, type SensayInsight } from '@/components/code-explanation-display';
+import { CodeExplanationDisplay } from '@/components/code-explanation-display';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import type { ExplainCodeOutput as CodeExplanation } from '@/ai/flows/explain-code'; // Updated type
+import type { ExplainCodeOutput as CodeExplanation } from '@/ai/flows/explain-code';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Info, Github, Brain } from 'lucide-react'; // Changed Settings to Brain for AI
-import { getSensayCodeInsight, type SensayCodeInsightOutput } from '@/ai/flows/sensay-code-insight-flow';
+import { Info, Github, Brain } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function Home() {
@@ -19,11 +18,6 @@ export default function Home() {
   const [agentStatus, setAgentStatus] = useState<string | null>(null);
   
   const [currentCodeSnippet, setCurrentCodeSnippet] = useState<string>('');
-
-  const [sensayInsight, setSensayInsight] = useState<SensayInsight | null>(null);
-  const [isSensayLoading, setIsSensayLoading] = useState(false);
-  const [sensayError, setSensayError] = useState<string | null>(null);
-
 
   const handleExplanationUpdate = (
     data: CodeExplanation | null,
@@ -39,8 +33,6 @@ export default function Home() {
     if (code) {
       setCurrentCodeSnippet(code);
     }
-    setSensayInsight(null);
-    setSensayError(null);
   };
 
   const handleClear = () => {
@@ -49,39 +41,7 @@ export default function Home() {
     setError(null);
     setAgentStatus(null);
     setCurrentCodeSnippet('');
-    setSensayInsight(null);
-    setIsSensayLoading(false);
-    setSensayError(null);
   };
-
-  const handleSensayInsightRequest = useCallback(async () => {
-    if (!currentCodeSnippet) {
-      setSensayError("No code snippet available to analyze with Sensay.");
-      return;
-    }
-
-    setIsSensayLoading(true);
-    setSensayError(null);
-    setSensayInsight(null);
-
-    try {
-      setAgentStatus("Requesting deeper insights from Sensay Wisdom Engine...");
-      const result: SensayCodeInsightOutput = await getSensayCodeInsight({ codeSnippet: currentCodeSnippet });
-      setSensayInsight({
-        text: result.insight,
-        rawResponse: result.rawSensayResponse,
-      });
-      setAgentStatus("Sensay insights received.");
-    } catch (e) {
-      const errorMsg = e instanceof Error ? e.message : "An unexpected error occurred while fetching Sensay insights.";
-      setSensayError(errorMsg);
-      setAgentStatus("Error receiving Sensay insights.");
-      console.error("Sensay Insight Error:", e);
-    } finally {
-      setIsSensayLoading(false);
-    }
-  }, [currentCodeSnippet]);
-
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
@@ -139,10 +99,6 @@ export default function Home() {
                 isLoading={isLoading}
                 error={error}
                 onClear={handleClear}
-                sensayInsight={sensayInsight}
-                isSensayLoading={isSensayLoading}
-                sensayError={sensayError}
-                onGetSensayInsight={handleSensayInsightRequest}
                 hasCode={!!currentCodeSnippet}
               />
             </CardContent>

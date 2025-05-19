@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -8,7 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Copy, AlertTriangle, Info, Brain, RefreshCw, BookOpen, Lightbulb, Bug, ShieldAlert, DraftingCompass, GitCompareArrows, Terminal, ExternalLink, Sparkles, Palette, SearchCheck, TestTubeDiagonal, FileWarning } from 'lucide-react';
+import { Copy, AlertTriangle, Info, Brain, RefreshCw, BookOpen, ExternalLink, Palette, SearchCheck, ShieldAlert, Bug, GitCompareArrows, FileWarning } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -22,20 +23,11 @@ import { useToast } from "@/hooks/use-toast";
 import type { ExplainCodeOutput as CodeExplanation } from '@/ai/flows/explain-code';
 import { cn } from '@/lib/utils';
 
-export interface SensayInsight {
-  text: string;
-  rawResponse?: any;
-}
-
 interface CodeExplanationDisplayProps {
   explanationData: CodeExplanation | null;
   isLoading: boolean;
   error: string | null;
   onClear: () => void;
-  sensayInsight: SensayInsight | null;
-  isSensayLoading: boolean;
-  sensayError: string | null;
-  onGetSensayInsight: () => void;
   hasCode: boolean;
 }
 
@@ -49,10 +41,6 @@ export function CodeExplanationDisplay({
   isLoading,
   error,
   onClear,
-  sensayInsight,
-  isSensayLoading,
-  sensayError,
-  onGetSensayInsight,
   hasCode,
 }: CodeExplanationDisplayProps) {
   const { toast } = useToast();
@@ -133,67 +121,6 @@ export function CodeExplanationDisplay({
   };
 
 
-  const renderSensayContent = () => {
-    if (isSensayLoading) {
-      return (
-        <Card className="mt-6 border-purple-500/50 shadow-md">
-           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg text-purple-600 dark:text-purple-400">
-              <Sparkles className="h-5 w-5 animate-pulse" /> Sensay Wisdom Engine Processing...
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2 p-3">
-              <Skeleton className="h-4 w-3/4" />
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-5/6" />
-            </div>
-          </CardContent>
-        </Card>
-      );
-    }
-    if (sensayError) {
-      return (
-        <Alert variant="destructive" className="mt-4">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Sensay Error</AlertTitle>
-          <AlertDescription>{sensayError}</AlertDescription>
-        </Alert>
-      );
-    }
-    if (sensayInsight) {
-      return (
-        <Card className="mt-6 border-purple-500/50 shadow-md">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg text-purple-600 dark:text-purple-400">
-              <Sparkles className="h-5 w-5" /> Sensay Wisdom Insights
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="bg-secondary text-secondary-foreground p-4 rounded-lg shadow-inner">
-               <div className={cn(
-                  "prose prose-sm max-w-none dark:prose-invert",
-                  "prose-headings:text-secondary-foreground prose-p:text-secondary-foreground prose-strong:text-secondary-foreground prose-ul:text-secondary-foreground prose-li:text-secondary-foreground",
-                  "dark:prose-headings:text-secondary-foreground dark:prose-p:text-secondary-foreground dark:prose-strong:text-secondary-foreground dark:prose-ul:text-secondary-foreground dark:prose-li:text-secondary-foreground",
-                  "prose-code:text-accent prose-code:bg-accent/10 prose-code:px-1 prose-code:py-0.5 prose-code:rounded",
-                  "dark:prose-code:text-accent-foreground dark:prose-code:bg-accent/20",
-                  "prose-pre:bg-background prose-pre:text-foreground prose-pre:p-3 prose-pre:rounded-md prose-pre:overflow-x-auto",
-                  "dark:prose-pre:bg-popover dark:prose-pre:text-popover-foreground",
-                  "prose-a:text-primary hover:prose-a:underline"
-               )}>
-                <ReactMarkdown>{sensayInsight.text}</ReactMarkdown>
-              </div>
-            </div>
-            <Button onClick={() => handleCopy(sensayInsight.text, "Sensay Insight")} variant="ghost" size="sm" className="mt-2 text-xs text-muted-foreground hover:text-primary">
-              <Copy className="mr-1.5 h-3 w-3" /> Copy Sensay Insight
-            </Button>
-          </CardContent>
-        </Card>
-      );
-    }
-    return null;
-  };
-
   const renderContent = () => {
     if (isLoading && !explanationData) {
       return (
@@ -224,7 +151,7 @@ export function CodeExplanationDisplay({
       );
     }
 
-    if (!explanationData && !isLoading && !error && !isSensayLoading && !sensayInsight) {
+    if (!explanationData && !isLoading && !error) {
       return (
         <div className="text-muted-foreground text-center py-10 border border-dashed border-muted rounded-md flex flex-col items-center justify-center h-full">
           <Info className="mx-auto h-10 w-10 mb-4 text-primary" />
@@ -239,7 +166,7 @@ export function CodeExplanationDisplay({
         {explanationData.language && (
           <div className="mb-4">
             <Badge variant="secondary" className="text-sm px-3 py-1 shadow">
-               <Terminal className="mr-1.5 h-3.5 w-3.5"/> Language: {explanationData.language}
+               <Copy className="mr-1.5 h-3.5 w-3.5"/> Language: {explanationData.language}
             </Badge>
           </div>
         )}
@@ -331,7 +258,6 @@ export function CodeExplanationDisplay({
     return (
       <>
         {geminiExplanationContent}
-        {renderSensayContent()}
       </>
     );
   };
@@ -345,10 +271,6 @@ export function CodeExplanationDisplay({
       <div className="flex flex-wrap gap-2 justify-end items-center mt-auto pt-4 border-t">
             <Button onClick={handleLearnMore} variant="ghost" size="sm" className="text-primary hover:bg-primary/10" disabled={isLoading || !explanationData?.language}>
                 <BookOpen className="mr-1.5 h-4 w-4" /> Learn More
-            </Button>
-            <Button onClick={onGetSensayInsight} variant="outline" size="sm" className="text-purple-600 border-purple-500 hover:bg-purple-500/10 dark:text-purple-400 dark:border-purple-400" disabled={isSensayLoading || isLoading || !hasCode}>
-                {isSensayLoading ? <Brain className="mr-1.5 h-4 w-4 animate-pulse" /> : <Sparkles className="mr-1.5 h-4 w-4" />}
-                {isSensayLoading ? "Sensay Thinking..." : "Get Sensay Wisdom"}
             </Button>
             <Button onClick={handleExplainAnother} variant="outline" size="sm" className="text-foreground border-border hover:bg-accent/50">
                 <RefreshCw className="mr-1.5 h-4 w-4" /> Explain Another
@@ -403,4 +325,3 @@ export function CodeExplanationDisplay({
     </div>
   );
 }
-
