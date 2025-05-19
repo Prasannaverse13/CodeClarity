@@ -87,7 +87,7 @@ CodeClarity is a Next.js web application designed to help users understand and i
     # or remove them. The "Ask Mentor" feature will be gracefully disabled if these are not set correctly.
 
     # SENSAY_API_KEY is your Organization Secret Key from Sensay.
-    # Example: SENSAY_API_KEY=10043e0796fd093f8a22bc3ffc09d328d96eec5df8e3779e4b7217c7e184a5eb
+    # Example: SENSAY_API_KEY=e1cae7e85c39dc22aff0b7b154cf0795c355a2b3176dbf9945e0ec6cdecdb5dd
     SENSAY_API_KEY=YOUR_SENSAY_ORGANIZATION_SECRET_KEY_HERE
     
     # SENSAY_REPLICA_ID is the UUID of the AI Replica you create and train on the Sensay platform.
@@ -128,52 +128,69 @@ Then navigate to `http://localhost:4000` (or the port specified by Genkit).
 
 ## 🧠 Setting Up Your Sensay Code Mentor Replica (For "Ask Mentor" Feature)
 
-For the "Ask the Code Mentor" feature to work, you **must** perform these setup steps on the Sensay platform:
+For the "Ask the Code Mentor" feature to work, you **must** perform these setup steps on the Sensay platform using `curl` commands in your terminal. Replace placeholder values with your actual information.
 
-1.  **Obtain Sensay Organization Secret Key (`SENSAY_API_KEY`):**
-    *   If you have an invite code, redeem it via the Sensay API: `POST /v1/api-keys/invites/{code}/redeem`. This will provide your Organization Secret Key.
-    *   Store this key as `SENSAY_API_KEY` in your `.env` file. **Ensure this is the Organization Secret Key and not a different type of key.**
+**Your Details (from `.env` or previous interactions):**
+*   Your Organization Secret Key (`SENSAY_API_KEY`): `e1cae7e85c39dc22aff0b7b154cf0795c355a2b3176dbf9945e0ec6cdecdb5dd`
+*   Desired User ID for your app (`SENSAY_USER_ID`): `default-codeclarity-user`
+*   Your desired API Version (`SENSAY_API_VERSION`): `2025-03-25`
 
-2.  **Create a User (`SENSAY_USER_ID`):**
-    *   Every interaction with a Sensay replica is associated with a user. You need to create a user within your Sensay organization.
-    *   Use the Sensay API: `POST /v1/users`. You can specify an ID (e.g., `default-codeclarity-user`) or let Sensay generate one.
-        ```bash
-        # Replace $YOUR_ORG_SECRET with your actual SENSAY_API_KEY
-        curl -X POST https://api.sensay.io/v1/users \
-         -H "X-ORGANIZATION-SECRET: $YOUR_ORG_SECRET" \
-         -H "X-API-Version: 2025-03-25" \
-         -H "Content-Type: application/json" \
-         -d '{"id": "default-codeclarity-user"}' 
-        ```
-    *   Store the chosen or generated user ID as `SENSAY_USER_ID` in your `.env` file. **This User ID must exist in your Sensay organization.**
+**Step 1: Create a User in Your Sensay Organization**
 
-3.  **Create an AI Replica (`SENSAY_REPLICA_ID`):**
-    *   Create a new AI Replica via the Sensay platform or API: `POST /v1/replicas`.
-        ```bash
-        # Replace $YOUR_ORG_SECRET and $YOUR_USER_ID accordingly
-        curl -X POST https://api.sensay.io/v1/replicas \
-         -H "X-ORGANIZATION-SECRET: $YOUR_ORG_SECRET" \
-         -H "X-API-Version: 2025-03-25" \
-         -H "Content-Type: application/json" \
-         -d '{
-           "name": "CodeClarity Code Mentor",
-           "shortDescription": "AI assistant for code understanding.",
-           "greeting": "Hi! I am the CodeClarity Code Mentor. How can I help with your code?",
-           "ownerID": "$YOUR_USER_ID", // This links the replica to the user created in step 2
-           "private": false, // Or true, depending on your needs
-           "slug": "codeclarity-code-mentor", 
-           "llm": { "provider": "openai", "model": "gpt-4o" } // Or your preferred LLM
-         }'
-        ```
-    *   The API response will include a `uuid` for the created replica. This is your `SENSAY_REPLICA_ID`.
-    *   Store this `uuid` as `SENSAY_REPLICA_ID` in your `.env` file.
+   If the user specified by `SENSAY_USER_ID` (e.g., `default-codeclarity-user`) does not already exist in your Sensay organization, you MUST create it.
+   Run the following `curl` command in your terminal, replacing the placeholders:
 
-4.  **Train this Replica:**
-    *   Train this Replica with data relevant to coding, code review, software engineering best practices, and the style of expertise you want it to emulate. This might involve:
-        -   Uploading documents (e.g., coding guidelines, API documentation).
-        -   Providing example Q&A pairs related to code.
-        -   Defining its personality and conversational style.
-    *   Refer to the "Training" section in the Sensay API documentation.
+   ```bash
+   # Set your environment variables (or replace directly in the command)
+   export ORGANIZATION_SECRET="YOUR_SENSAY_API_KEY_FROM_ENV" 
+   export USER_ID_TO_CREATE="default-codeclarity-user" # Or your desired SENSAY_USER_ID
+   export API_VERSION="2025-03-25"
+
+   curl -X POST https://api.sensay.io/v1/users \
+     -H "X-ORGANIZATION-SECRET: $ORGANIZATION_SECRET" \
+     -H "X-API-Version: $API_VERSION" \
+     -H "Content-Type: application/json" \
+     -d '{"id": "'"$USER_ID_TO_CREATE"'"}'
+   ```
+   *   **Verify the response.** It should confirm the user was created (e.g., `{"id": "default-codeclarity-user", "linkedAccounts": []}`). If it says the user already exists, that's fine.
+   *   Make sure the `id` you use here matches the `SENSAY_USER_ID` in your `.env` file.
+
+**Step 2: Create (or Verify) Your AI Replica and Ensure Correct Ownership**
+
+   You need an AI Replica that will act as your Code Mentor. The `ownerID` of this replica **MUST** be the `SENSAY_USER_ID` you created or verified in Step 1.
+
+   *   **If you need to create a new Replica owned by this user:**
+      Run the following `curl` command. Note the `ownerID` field.
+
+      ```bash
+      # Ensure $ORGANIZATION_SECRET, $USER_ID_TO_CREATE, and $API_VERSION are still set
+      # from Step 1, where $USER_ID_TO_CREATE is your SENSAY_USER_ID.
+
+      curl -X POST https://api.sensay.io/v1/replicas \
+        -H "X-ORGANIZATION-SECRET: $ORGANIZATION_SECRET" \
+        -H "X-API-Version: $API_VERSION" \
+        -H "Content-Type: application/json" \
+        -d '{
+          "name": "CodeClarity Code Mentor",
+          "shortDescription": "AI assistant for code understanding.",
+          "greeting": "Hi! I am the CodeClarity Code Mentor. How can I help with your code?",
+          "ownerID": "'"$USER_ID_TO_CREATE"'",  # CRITICAL: Links replica to your user
+          "private": false,
+          "slug": "codeclarity-mentor-for-app", # Choose a unique slug
+          "llm": { "provider": "openai", "model": "gpt-4o" } # Or your preferred LLM
+        }'
+      ```
+      The response will include a `uuid`. **This `uuid` is your `SENSAY_REPLICA_ID`. Update your `.env` file with this new ID.**
+
+   *   **If you believe a Replica already exists (e.g., `cbb19521-47b2-4371-b907-40f174f954f8`):**
+      You need to ensure its `ownerID` matches your `SENSAY_USER_ID`. You might need to check this via the Sensay platform UI or their API for listing/getting replica details (if available). If the `ownerID` doesn't match, you might need to re-create the replica using the command above to ensure correct ownership, or see if Sensay allows changing the owner.
+
+**Step 3: Train this Replica:**
+   Train this Replica with data relevant to coding, code review, software engineering best practices, and the style of expertise you want it to emulate. This might involve:
+    -   Uploading documents (e.g., coding guidelines, API documentation).
+    -   Providing example Q&A pairs related to code.
+    -   Defining its personality and conversational style.
+   Refer to the "Training" section in the Sensay API documentation.
 
 **Troubleshooting Sensay 401 Unauthorized Errors:**
 A "401 Unauthorized" error from the Sensay API almost always means there's a mismatch or permission issue with your `SENSAY_API_KEY`, `SENSAY_USER_ID`, and `SENSAY_REPLICA_ID` on the Sensay platform.
