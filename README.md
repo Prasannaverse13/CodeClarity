@@ -19,7 +19,6 @@ CodeClarity is a Next.js web application designed to help users understand and i
 -   **Ask the Code Mentor (Sensay Wisdom Engine):** Engage in a conversation with an AI mentor about your code.
     -   Ask specific questions regarding the entered code.
     -   Receive contextual answers from a Sensay AI Replica trained on coding expertise.
-    -   (Future Potential: Memory-based, evolving tutor-like chats, learning plans, persona switching).
 -   **Copy Functionality:** Easily copy the generated explanation or mentor's answer.
 -   **Clear & Explain Another:** Simple controls to clear the current analysis and input new code.
 -   **Responsive Design:** Works on different screen sizes.
@@ -84,8 +83,9 @@ CodeClarity is a Next.js web application designed to help users understand and i
 
     # For Sensay Wisdom Engine "Ask an Expert" Code Mentor
     SENSAY_API_KEY=10043e0796fd093f8a22bc3ffc09d328d96eec5df8e3779e4b7217c7e184a5eb
+    # IMPORTANT: Replace YOUR_SENSAY_REPLICA_ID_HERE with the actual ID 
+    #            you get from the Sensay platform after creating and training your Replica.
     SENSAY_REPLICA_ID=YOUR_SENSAY_REPLICA_ID_HERE 
-    # (You need to create/train a Replica in Sensay and get its ID)
     SENSAY_USER_ID=default-codeclarity-user 
     # (Or a dynamic user ID specific to your application's users)
     SENSAY_API_VERSION=2025-03-25 
@@ -94,7 +94,7 @@ CodeClarity is a Next.js web application designed to help users understand and i
     *   **Google Gemini API Key:** Obtain one from [Google AI Studio](https://aistudio.google.com/app/apikey).
     *   **Sensay API Key & Replica ID:**
         *   The `SENSAY_API_KEY` provided is an example. You should have your own from Sensay.
-        *   `SENSAY_REPLICA_ID`: You need to create a Replica on the Sensay platform, train it with relevant coding knowledge, and then use its unique ID here.
+        *   `SENSAY_REPLICA_ID`: **Crucial!** You MUST create a Replica on the Sensay platform ([https://sensay.io/](https://sensay.io/)), train it with relevant coding knowledge, and then use its unique ID here. The "Ask Mentor" feature will not work without a valid Replica ID.
         *   `SENSAY_USER_ID`: This is used to identify the user interacting with the Sensay replica. It can be a static ID for general use or a dynamic ID if you implement user accounts.
     *   *Note: Never commit your `.env` file or your API keys directly into your code.*
 
@@ -114,7 +114,7 @@ Then navigate to `http://localhost:4000` (or the port specified by Genkit).
 
 ## 🧠 Training Your Sensay Code Mentor Replica
 For the "Ask the Code Mentor" feature to be effective, you need to:
-1.  Access the Sensay platform.
+1.  Access the Sensay platform ([https://sensay.io/](https://sensay.io/)).
 2.  Create a new AI Replica.
 3.  Train this Replica with data relevant to coding, code review, software engineering best practices, and the style of expertise you want it to emulate. This might involve:
     -   Uploading documents (e.g., coding guidelines, API documentation).
@@ -122,3 +122,4 @@ For the "Ask the Code Mentor" feature to be effective, you need to:
     -   Defining its personality and conversational style.
 4.  Once trained and deployed, obtain the `Replica ID` and update it in your `.env` file for `SENSAY_REPLICA_ID`.
 Refer to the [Sensay Documentation](https://docs.sensay.io/) for detailed instructions on creating and training Replicas.
+```
