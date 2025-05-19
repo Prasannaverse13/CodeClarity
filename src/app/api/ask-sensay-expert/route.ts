@@ -7,17 +7,38 @@ const sensayUserId = process.env.SENSAY_USER_ID;
 const sensayApiVersion = process.env.SENSAY_API_VERSION || '2025-03-25';
 const sensayApiBaseUrl = 'https://api.sensay.io/v1';
 
+// Log the values read from environment variables for debugging
+console.log('[Sensay API Route] Initializing...');
+console.log(`[Sensay API Route] SENSAY_API_KEY loaded: ${sensayApiKey ? 'Exists (starts with: ' + sensayApiKey.substring(0,10) + '...)' : 'MISSING_OR_EMPTY'}`);
+console.log(`[Sensay API Route] SENSAY_REPLICA_ID loaded: "${sensayReplicaId}"`); // Log the actual value
+console.log(`[Sensay API Route] SENSAY_USER_ID loaded: "${sensayUserId}"`);
+console.log(`[Sensay API Route] SENSAY_API_VERSION: "${sensayApiVersion}"`);
+console.log(`[Sensay API Route] SENSAY_API_BASE_URL: "${sensayApiBaseUrl}"`);
+
+
 export async function POST(req: NextRequest) {
-  if (!sensayApiKey) {
-    console.error('SENSAY_API_KEY is not set.');
+  console.log('[Sensay API Route] POST request received.');
+  // Re-check and log critical variables inside the POST handler in case they are scoped differently
+  // or to see if they change between server start and request time.
+  const currentSensayApiKey = process.env.SENSAY_API_KEY;
+  const currentSensayReplicaId = process.env.SENSAY_REPLICA_ID;
+  const currentSensayUserId = process.env.SENSAY_USER_ID;
+
+  console.log(`[Sensay API Route - POST] SENSAY_API_KEY check: ${currentSensayApiKey ? 'Exists' : 'MISSING_OR_EMPTY'}`);
+  console.log(`[Sensay API Route - POST] SENSAY_REPLICA_ID check: "${currentSensayReplicaId}"`);
+  console.log(`[Sensay API Route - POST] SENSAY_USER_ID check: "${currentSensayUserId}"`);
+
+
+  if (!currentSensayApiKey) {
+    console.error('[Sensay API Route - POST] SENSAY_API_KEY is not set.');
     return NextResponse.json({ error: 'Sensay API key not configured.' }, { status: 500 });
   }
-  if (!sensayReplicaId || sensayReplicaId === 'YOUR_SENSAY_REPLICA_ID_HERE') {
-    console.error('SENSAY_REPLICA_ID is not set or is a placeholder.');
+  if (!currentSensayReplicaId || currentSensayReplicaId === 'YOUR_SENSAY_REPLICA_ID_HERE') {
+    console.error(`[Sensay API Route - POST] SENSAY_REPLICA_ID is not set or is a placeholder. Value: "${currentSensayReplicaId}"`);
     return NextResponse.json({ error: 'Sensay Replica ID not configured.' }, { status: 500 });
   }
-   if (!sensayUserId) {
-    console.error('SENSAY_USER_ID is not set.');
+   if (!currentSensayUserId) {
+    console.error('[Sensay API Route - POST] SENSAY_USER_ID is not set.');
     return NextResponse.json({ error: 'Sensay User ID not configured.' }, { status: 500 });
   }
 
@@ -34,14 +55,15 @@ ${code}
 \`\`\`
 User's question: ${question}`;
 
-    const endpointUrl = `${sensayApiBaseUrl}/replicas/${sensayReplicaId}/chat/completions`;
+    const endpointUrl = `${sensayApiBaseUrl}/replicas/${currentSensayReplicaId}/chat/completions`;
+    console.log(`[Sensay API Route - POST] Calling Sensay endpoint: ${endpointUrl}`);
 
     const response = await fetch(endpointUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-ORGANIZATION-SECRET': sensayApiKey,
-        'X-USER-ID': sensayUserId,
+        'X-ORGANIZATION-SECRET': currentSensayApiKey, // Using X-ORGANIZATION-SECRET as per Sensay docs
+        'X-USER-ID': currentSensayUserId,
         'X-API-Version': sensayApiVersion,
       },
       body: JSON.stringify({
@@ -50,26 +72,30 @@ User's question: ${question}`;
       }),
     });
 
+    console.log(`[Sensay API Route - POST] Response status from Sensay: ${response.status}`);
+
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: "Failed to parse error response from Sensay" }));
-      console.error('Error from Sensay API:', response.status, errorData);
+      const errorText = await response.text(); // Get raw error text for better diagnostics
+      console.error(`[Sensay API Route - POST] Error from Sensay API. Status: ${response.status}, Body: ${errorText}`);
       return NextResponse.json(
-        { error: `Sensay API error: ${errorData?.error || response.statusText}` },
+        { error: `Sensay API error: ${response.statusText} - ${errorText}` },
         { status: response.status }
       );
     }
 
     const data = await response.json();
+    console.log('[Sensay API Route - POST] Successfully received and parsed data from Sensay.');
+
 
     if (data.success && data.content) {
       return NextResponse.json({ expertAnswer: data.content });
     } else {
-      console.error('Unexpected response format from Sensay API:', data);
+      console.error('[Sensay API Route - POST] Unexpected response format from Sensay API:', data);
       return NextResponse.json({ error: 'No expert answer received or unexpected format from Sensay API.' }, { status: 500 });
     }
 
   } catch (error) {
-    console.error('Error processing Sensay request:', error);
+    console.error('[Sensay API Route - POST] Error processing Sensay request:', error);
     const message = error instanceof Error ? error.message : 'Failed to process the request.';
     return NextResponse.json({ error: message }, { status: 500 });
   }
