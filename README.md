@@ -105,7 +105,7 @@ CodeClarity is a Next.js web application designed to help users understand and i
     # Example: SENSAY_API_VERSION=2025-03-25
     SENSAY_API_VERSION=2025-03-25
     ```
-    *   **`GOOGLE_GENAI_API_KEY`:** Obtain one from [Google AI Studio](https://aistudio.google.com/app/apikey). **This is required for the core code explanation feature.** If left as the placeholder or blank, Google AI features will not work.
+    *   **`GOOGLE_GENAI_API_KEY`:** Obtain one from [Google AI Studio](https://aistudio.google.com/app/apikey). **This is required for the core code explanation feature.** If left as the placeholder `YOUR_GOOGLE_GENAI_API_KEY_HERE_OR_LEAVE_BLANK_IF_NOT_USING` or blank, Google AI features will not work.
     *   **Sensay Credentials (for "Ask Mentor" feature):**
         *   `SENSAY_API_KEY`: This is your **Organization Secret Key** obtained from Sensay (e.g., after redeeming an invite code). **Do not include `sensay_sk_` prefix unless explicitly part of the key Sensay provides directly.**
         *   `SENSAY_REPLICA_ID`: **CRUCIAL!** You MUST create an AI Replica on the Sensay platform ([https://sensay.io/](https://sensay.io/)), train it, and use its unique ID here.
@@ -204,4 +204,3 @@ Refer to the [Sensay Documentation](https://docs.sensay.io/) for detailed instru
 
 *   Yes, the core AI explanation feature is an agent built with TypeScript (Next.js) and orchestrated using Genkit to interact with the Google Gemini model. The "Explain Code" functionality in `src/ai/flows/explain-code.ts` acts as an AI agent that receives code, processes it via an LLM, and returns a structured analysis.
 *   The optional Sensay integration further enhances this by adding another layer of agent-like conversational capabilities.
-
