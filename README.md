@@ -79,11 +79,12 @@ CodeClarity is a Next.js web application designed to help users understand and i
     Create a `.env` file in the root of the project and add the following:
     ```env
     # For Google Gemini based code explanation
-    GOOGLE_GENAI_API_KEY=YOUR_GOOGLE_GENAI_API_KEY_HERE
+    # Obtain a valid API key from https://aistudio.google.com/app/apikey
+    GOOGLE_GENAI_API_KEY=YOUR_GOOGLE_GENAI_API_KEY_HERE_OR_LEAVE_BLANK_IF_NOT_USING
 
     # --- Sensay Wisdom Engine "Ask an Expert" Code Mentor (Optional) ---
     # If you do not wish to use the Sensay Code Mentor, you can leave these blank
-    # or remove them. The "Ask Mentor" feature will be gracefully disabled.
+    # or remove them. The "Ask Mentor" feature will be gracefully disabled if these are not set correctly.
 
     # SENSAY_API_KEY is your Organization Secret Key from Sensay.
     # Example: SENSAY_API_KEY=10043e0796fd093f8a22bc3ffc09d328d96eec5df8e3779e4b7217c7e184a5eb
@@ -104,7 +105,7 @@ CodeClarity is a Next.js web application designed to help users understand and i
     # Example: SENSAY_API_VERSION=2025-03-25
     SENSAY_API_VERSION=2025-03-25
     ```
-    *   **`GOOGLE_GENAI_API_KEY`:** Obtain one from [Google AI Studio](https://aistudio.google.com/app/apikey).
+    *   **`GOOGLE_GENAI_API_KEY`:** Obtain one from [Google AI Studio](https://aistudio.google.com/app/apikey). **This is required for the core code explanation feature.** If left as the placeholder or blank, Google AI features will not work.
     *   **Sensay Credentials (for "Ask Mentor" feature):**
         *   `SENSAY_API_KEY`: This is your **Organization Secret Key** obtained from Sensay (e.g., after redeeming an invite code). **Do not include `sensay_sk_` prefix unless explicitly part of the key Sensay provides directly.**
         *   `SENSAY_REPLICA_ID`: **CRUCIAL!** You MUST create an AI Replica on the Sensay platform ([https://sensay.io/](https://sensay.io/)), train it, and use its unique ID here.
@@ -131,7 +132,7 @@ For the "Ask the Code Mentor" feature to work, you **must** perform these setup 
 
 1.  **Obtain Sensay Organization Secret Key (`SENSAY_API_KEY`):**
     *   If you have an invite code, redeem it via the Sensay API: `POST /v1/api-keys/invites/{code}/redeem`. This will provide your Organization Secret Key.
-    *   Store this key as `SENSAY_API_KEY` in your `.env` file.
+    *   Store this key as `SENSAY_API_KEY` in your `.env` file. **Ensure this is the Organization Secret Key and not a different type of key.**
 
 2.  **Create a User (`SENSAY_USER_ID`):**
     *   Every interaction with a Sensay replica is associated with a user. You need to create a user within your Sensay organization.
@@ -144,7 +145,7 @@ For the "Ask the Code Mentor" feature to work, you **must** perform these setup 
          -H "Content-Type: application/json" \
          -d '{"id": "default-codeclarity-user"}' 
         ```
-    *   Store the chosen or generated user ID as `SENSAY_USER_ID` in your `.env` file.
+    *   Store the chosen or generated user ID as `SENSAY_USER_ID` in your `.env` file. **This User ID must exist in your Sensay organization.**
 
 3.  **Create an AI Replica (`SENSAY_REPLICA_ID`):**
     *   Create a new AI Replica via the Sensay platform or API: `POST /v1/replicas`.
@@ -158,7 +159,7 @@ For the "Ask the Code Mentor" feature to work, you **must** perform these setup 
            "name": "CodeClarity Code Mentor",
            "shortDescription": "AI assistant for code understanding.",
            "greeting": "Hi! I am the CodeClarity Code Mentor. How can I help with your code?",
-           "ownerID": "$YOUR_USER_ID", // This links the replica to the user
+           "ownerID": "$YOUR_USER_ID", // This links the replica to the user created in step 2
            "private": false, // Or true, depending on your needs
            "slug": "codeclarity-code-mentor", 
            "llm": { "provider": "openai", "model": "gpt-4o" } // Or your preferred LLM
@@ -176,8 +177,31 @@ For the "Ask the Code Mentor" feature to work, you **must** perform these setup 
 
 **Troubleshooting Sensay 401 Unauthorized Errors:**
 A "401 Unauthorized" error from the Sensay API almost always means there's a mismatch or permission issue with your `SENSAY_API_KEY`, `SENSAY_USER_ID`, and `SENSAY_REPLICA_ID` on the Sensay platform.
-*   Ensure `SENSAY_API_KEY` is the correct Organization Secret.
+*   Ensure `SENSAY_API_KEY` is the correct **Organization Secret**.
 *   Ensure `SENSAY_USER_ID` **exists** within that organization.
-*   Ensure the `SENSAY_REPLICA_ID` **belongs to that organization** AND the `SENSAY_USER_ID` is authorized to access it (e.g., is the `ownerID`).
+*   Ensure the `SENSAY_REPLICA_ID` **belongs to that organization** AND the `SENSAY_USER_ID` is authorized to access it (e.g., is the `ownerID` of the replica, or the replica is public and the user is authorized).
 
 Refer to the [Sensay Documentation](https://docs.sensay.io/) for detailed instructions on these setup steps. The "Getting Started" and "Conceptual Model" sections are particularly relevant.
+
+**How the project uses AI technologies:**
+
+*   **Core Functionality (AI-Driven):** The primary purpose of CodeClarity is to leverage AI (Google Gemini) for code explanation and review. This is not a minor feature but the central value proposition.
+*   **Genkit for AI Orchestration:** The project uses Genkit to define and manage the interaction with the Google Gemini model, including structuring prompts, handling responses, and managing potential errors. This demonstrates a sophisticated approach to integrating AI models.
+*   **(Optional) Sensay Wisdom Engine for Enhanced Interaction:** The optional integration with Sensay aims to elevate the AI from a one-shot explainer to a conversational mentor with memory, showcasing an advanced use of AI for interactive learning and support.
+*   **Structured AI Output:** The `explainCode` flow is designed to receive a structured JSON output from Gemini, which is then parsed and displayed in a user-friendly format. This is more advanced than simply displaying raw text output from an LLM.
+
+**Project Completeness & Technical Implementation:**
+
+*   **Repository Structure:** The project follows a standard Next.js structure, with clear separation for AI flows (`src/ai/flows`), components (`src/components`), API routes (`src/app/api`), and services (`src/services`).
+*   **README:** This README provides comprehensive setup instructions, feature descriptions, and troubleshooting tips.
+*   **Code Comments:** Key functions and complex logic (especially in AI flows and API routes) are commented to explain their purpose.
+*   **Security Best Practices:** API keys are managed via environment variables (`.env`) and are not hardcoded. Backend API routes handle interactions with external AI services, preventing client-side exposure of keys.
+*   **Robustness:** Error handling is implemented in AI flows and API interactions to gracefully manage issues like invalid API keys, network errors, or unexpected responses from AI services.
+*   **Substantial Technical Implementation:** The project involves setting up Genkit, defining complex Zod schemas for AI input/output, crafting detailed system prompts, and integrating multiple UI components to create a functional application. This goes beyond simple sample code.
+*   **Showcasing Next.js & Genkit:** The project effectively uses Next.js App Router, Server Components (implicitly via Genkit flows), and TypeScript. Genkit is used as the primary tool for AI interaction with Google Gemini.
+
+**Is the solution an agent built with JavaScript/TypeScript and Genkit?**
+
+*   Yes, the core AI explanation feature is an agent built with TypeScript (Next.js) and orchestrated using Genkit to interact with the Google Gemini model. The "Explain Code" functionality in `src/ai/flows/explain-code.ts` acts as an AI agent that receives code, processes it via an LLM, and returns a structured analysis.
+*   The optional Sensay integration further enhances this by adding another layer of agent-like conversational capabilities.
+

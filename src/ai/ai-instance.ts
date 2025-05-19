@@ -3,12 +3,12 @@ import {genkit, GenkitError} from 'genkit';
 import {googleAI} from '@genkit-ai/googleai';
 
 const googleApiKeyFromEnv = process.env.GOOGLE_GENAI_API_KEY;
-const placeholderApiKey = "YOUR_GOOGLE_GEMINI_API_KEY_HERE_OR_LEAVE_BLANK_IF_NOT_USING";
+const placeholderApiKey = "YOUR_GOOGLE_GENAI_API_KEY_HERE_OR_LEAVE_BLANK_IF_NOT_USING";
 
 let effectiveApiKey: string | undefined = undefined;
 let shouldInitializeGoogleAI = false;
 
-if (googleApiKeyFromEnv && googleApiKeyFromEnv !== placeholderApiKey && googleApiKeyFromEnv.trim() !== "") {
+if (googleApiKeyFromEnv && googleApiKeyFromEnv.trim() !== "" && googleApiKeyFromEnv !== placeholderApiKey) {
   effectiveApiKey = googleApiKeyFromEnv;
   shouldInitializeGoogleAI = true;
 } else {
@@ -16,14 +16,14 @@ if (googleApiKeyFromEnv && googleApiKeyFromEnv !== placeholderApiKey && googleAp
     // In production, if the key is missing or placeholder, it's a critical issue.
     throw new GenkitError({
       status: 'FAILED_PRECONDITION',
-      message: 'GOOGLE_GENAI_API_KEY environment variable is not set, is a placeholder, or is an empty string. This is required for production.',
+      message: 'GOOGLE_GENAI_API_KEY environment variable is not set, is a placeholder, or is an empty string. This is required for production. Please obtain a key from https://aistudio.google.com/app/apikey and set it in your .env file.',
     });
   } else {
     // In development, warn if the key is missing, is the placeholder, or is empty.
     // The googleAI plugin will not be initialized in this case.
     console.warn(
       'WARNING: GOOGLE_GENAI_API_KEY is not set, is a placeholder, or is an empty string. ',
-      'Google AI related flows will not work. Please set a valid key in your .env file if you intend to use Google AI features.'
+      'Google AI related flows will not work. Please set a valid key from https://aistudio.google.com/app/apikey in your .env file if you intend to use Google AI features.'
     );
   }
 }
