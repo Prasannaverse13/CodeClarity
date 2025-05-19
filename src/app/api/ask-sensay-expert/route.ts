@@ -33,9 +33,10 @@ export async function POST(req: NextRequest) {
     console.error('[Sensay API Route - POST] SENSAY_API_KEY is not set.');
     return NextResponse.json({ error: 'Sensay API key not configured.' }, { status: 500 });
   }
-  if (!currentSensayReplicaId || currentSensayReplicaId === 'YOUR_SENSAY_REPLICA_ID_HERE' || currentSensayReplicaId === 'cbb19521-47b2-4371-b907-40f174f954f8') { // Added check for placeholder
-    console.error(`[Sensay API Route - POST] SENSAY_REPLICA_ID is not set or is a placeholder. Value: "${currentSensayReplicaId}"`);
-    return NextResponse.json({ error: 'Sensay Replica ID not configured.' }, { status: 500 });
+  // Corrected the check: removed the specific Replica ID 'cbb19521-47b2-4371-b907-40f174f954f8' from the placeholder check.
+  if (!currentSensayReplicaId || currentSensayReplicaId === 'YOUR_SENSAY_REPLICA_ID_HERE') {
+    console.error(`[Sensay API Route - POST] SENSAY_REPLICA_ID is not set or is still the default placeholder. Value: "${currentSensayReplicaId}"`);
+    return NextResponse.json({ error: 'Sensay Replica ID not configured. Please set your actual Replica ID in the .env file.' }, { status: 500 });
   }
    if (!currentSensayUserId) {
     console.error('[Sensay API Route - POST] SENSAY_USER_ID is not set.');
@@ -55,6 +56,7 @@ ${code}
 \`\`\`
 User's question: ${question}`;
 
+    // Endpoint for chat completions with a specific replica
     const endpointUrl = `${sensayApiBaseUrl}/replicas/${currentSensayReplicaId}/chat/completions`;
     console.log(`[Sensay API Route - POST] Calling Sensay endpoint: ${endpointUrl}`);
 
@@ -62,7 +64,7 @@ User's question: ${question}`;
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-ORGANIZATION-SECRET': currentSensayApiKey, // Corrected header for API Key
+        'X-ORGANIZATION-SECRET': currentSensayApiKey, // Using X-ORGANIZATION-SECRET as per Sensay docs
         'X-USER-ID': currentSensayUserId,
         'X-API-Version': sensayApiVersion,
       },
