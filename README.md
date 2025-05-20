@@ -1,24 +1,24 @@
 
 # CodeClarity 🧠 - Your AI Code Review & Explanation Agent + Code Mentor
 
-CodeClarity is a Next.js web application designed to help users understand and improve code snippets. It leverages the Sensay Wisdom Engine API for detailed code explanations, analysis, and an interactive AI Code Mentor experience.
+CodeClarity is a Next.js web application designed to help users understand and improve code snippets. It leverages the **Sensay Wisdom Engine API** for detailed code explanations, analysis, and an interactive AI Code Mentor experience.
 
 ## ✨ Features
 
--   **Code Input:** Simple interface to paste or type code snippets with line numbers.
--   **AI-Powered Explanation (Sensay Wisdom Engine):** Get detailed, step-by-step explanations of what the code does.
+-   **Code Input:** Simple interface to paste or type code snippets.
+-   **AI-Powered Explanation (Sensay Wisdom Engine):** Get detailed, step-by-step explanations of what the code does, including:
     -   Language Detection.
-    -   Comprehensive Analysis covering:
-        -   Style & Formatting Suggestions
-        -   Code Smell Detection
-        -   Security Vulnerability Checks
-        -   Potential Bug Identification & Fix Suggestions
-        -   Alternative Code Approaches
-        -   General Warnings & Suggestions
+    -   Comprehensive Analysis (logic, purpose, inputs/outputs).
+    -   Style & Formatting Suggestions.
+    -   Code Smell Detection.
+    -   Security Vulnerability Checks.
+    -   Potential Bug Identification & Fix Suggestions.
+    -   Alternative Code Approaches.
+    -   General Warnings & Other Suggestions.
 -   **Ask the Code Mentor (Sensay Wisdom Engine):** Engage in a conversation with an AI mentor about your code in a dedicated chat panel.
-    -   Ask specific questions regarding the entered code.
+    -   Ask specific questions regarding the entered code or general programming concepts.
     -   Receive contextual answers from a Sensay AI Replica trained on coding expertise.
--   **Learn More Links:** The AI suggests relevant Google search queries to help users deepen their understanding.
+-   **Learn More Links:** The AI suggests relevant Google search queries to help users deepen their understanding, provided as part of the main analysis.
 -   **Copy Functionality:** Easily copy the generated analysis.
 -   **Clear & Explain Another:** Simple controls to clear the current analysis and input new code.
 -   **Responsive Design:** Works on different screen sizes (three-column layout on wider screens).
@@ -28,11 +28,11 @@ CodeClarity is a Next.js web application designed to help users understand and i
 ## 🚀 How It Works
 
 The application is structured with a three-column layout:
-1.  **Left Column (Code Input):** The user enters a code snippet into the enhanced text area.
+1.  **Left Column (Code Input):** The user enters a code snippet.
 2.  **Middle Column (AI Analysis):**
     -   Clicking "Explain Code" sends the code to the Next.js backend API route (`/api/ask-sensay-expert`).
-    -   This API route constructs a detailed prompt asking the Sensay Wisdom Engine (via your configured Replica) for a comprehensive analysis.
-    -   The structured analysis (formatted as markdown) is returned and displayed in the `CodeExplanationDisplay` component. This includes language detection, logic breakdown, suggestions, potential bugs, alternatives, and learn more links.
+    -   This API route constructs a detailed prompt asking the Sensay Wisdom Engine (via your configured Replica) for a comprehensive analysis (language, logic, suggestions, bugs, alternatives, learn more links, etc.).
+    -   The structured analysis (formatted as markdown) is returned and displayed in the `CodeExplanationDisplay` component, with each section presented in its own card for clarity.
 3.  **Right Column (Code Mentor Chat):**
     -   This panel allows for a conversational interaction with the Sensay AI Replica.
     -   Users can type questions or messages related to the current code snippet (or general coding queries).
@@ -40,6 +40,27 @@ The application is structured with a three-column layout:
     -   The conversation history is displayed in a chat-like interface.
 
 All AI interactions are routed through the `/api/ask-sensay-expert` Next.js API route, which securely communicates with the Sensay Wisdom Engine API using your configured API Key, Replica ID, and User ID.
+
+## 🧠 Sensay Wisdom Engine Integration
+
+CodeClarity deeply integrates the Sensay Wisdom Engine API to provide its core AI functionalities:
+
+1.  **Comprehensive Code Analysis:**
+    *   When a user submits code for explanation, the backend (`/api/ask-sensay-expert/route.ts`) sends a specially crafted, detailed prompt to a **Sensay AI Replica**.
+    *   This prompt instructs the Replica to analyze the code thoroughly and return a structured markdown response covering language detection, logic breakdown, style suggestions, potential bugs, security vulnerabilities, alternative approaches, and "Learn More" Google search queries.
+    *   The frontend (`CodeExplanationDisplay.tsx`) then parses this markdown and presents each section in a separate, easy-to-read card.
+
+2.  **Interactive Code Mentor:**
+    *   The chat panel allows users to have an ongoing, conversational dialogue with the same **Sensay AI Replica**.
+    *   This Replica is intended to be trained with extensive coding knowledge, acting as a personal AI code tutor. It can remember the context of the conversation (within Sensay's capabilities) and provide in-depth answers to follow-up questions.
+    *   The backend API route (`/api/ask-sensay-expert/route.ts`) facilitates this chat by relaying user messages and Replica responses.
+
+**Key Sensay Components Used:**
+*   **Sensay AI Replica:** A specific instance of an AI model trained on the Sensay platform with coding expertise. You need to create and configure this Replica. Its ID is stored in `SENSAY_REPLICA_ID`.
+*   **Sensay Organization Secret Key (`SENSAY_API_KEY`):** Your master API key for accessing Sensay services.
+*   **Sensay User ID (`SENSAY_USER_ID`):** An identifier for a user within your Sensay organization who has permission to interact with the Replica.
+
+This dual approach allows CodeClarity to offer both a structured, detailed initial analysis and a flexible, interactive mentorship experience, all powered by the Sensay Wisdom Engine.
 
 ## 🛠️ Tech Stack
 
@@ -52,12 +73,13 @@ All AI interactions are routed through the `/api/ask-sensay-expert` Next.js API 
 
 ## 🔑 Key File Locations
 
--   **Sensay API Interaction (Backend):** `src/app/api/ask-sensay-expert/route.ts` (Handles both full analysis and chat)
--   **Main Page UI & Logic:** `src/app/page.tsx`
--   **Code Input Component:** `src/components/code-input.tsx`
--   **Sensay Analysis Display Component:** `src/components/code-explanation-display.tsx`
--   **Global Styles & Theme:** `src/app/globals.css`
--   **Theme Provider & Toggle:** `src/components/theme-provider.tsx`, `src/components/theme-toggle.tsx`
+-   **Sensay API Interaction (Backend):** `src/app/api/ask-sensay-expert/route.ts` (Handles all interactions with the Sensay AI Replica for both full analysis and chat).
+-   **Main Page UI & Logic:** `src/app/page.tsx` (Manages state, calls the backend API, renders the three-column layout including the code input, analysis display, and chat panel).
+-   **Code Input Component:** `src/components/code-input.tsx` (Handles user code entry).
+-   **Sensay Analysis Display Component:** `src/components/code-explanation-display.tsx` (Parses and displays the structured analysis from Sensay).
+-   **Global Styles & Theme:** `src/app/globals.css` (Defines the application's theme and global styles).
+-   **Theme Provider & Toggle:** `src/components/theme-provider.tsx`, `src/components/theme-toggle.tsx` (Manages dark/light mode).
+-   **Environment Variables:** `.env` (Stores `SENSAY_API_KEY`, `SENSAY_REPLICA_ID`, `SENSAY_USER_ID`, `SENSAY_API_VERSION`).
 
 ## ⚙️ Setup & Running
 
@@ -119,7 +141,7 @@ All AI interactions are routed through the `/api/ask-sensay-expert` Next.js API 
 For the "Ask the Code Mentor" and "Explain Code" features to work, you **must** perform these setup steps on the Sensay platform using `curl` commands in your terminal. Replace placeholder values with your actual information.
 
 **Your Details (from `.env` or previous interactions):**
-*   Your Organization Secret Key (`SENSAY_API_KEY`): `e1cae7e85c39dc22aff0b7b154cf0795c355a2b3176dbf9945e0ec6cdecdb5dd` (Use your actual key)
+*   Your Organization Secret Key (`SENSAY_API_KEY`): `YOUR_SENSAY_ORGANIZATION_SECRET_KEY_HERE` (Use your actual key)
 *   Desired User ID for your app (`SENSAY_USER_ID`): `default-codeclarity-user` (You can choose another ID, but it must match your `.env`)
 *   Your desired API Version (`SENSAY_API_VERSION`): `2025-03-25`
 
@@ -206,3 +228,5 @@ Refer to the [Sensay Documentation](https://docs.sensay.io/) for detailed instru
 **Is the solution an agent built with JavaScript/TypeScript?**
 
 *   Yes, the application is built with TypeScript (Next.js). The backend API route `/api/ask-sensay-expert` acts as an intermediary agent, taking user input, formatting it for the Sensay API, and relaying Sensay's AI-generated responses back to the user interface. The Sensay Replica itself is the core AI agent providing the intelligence.
+    
+    
