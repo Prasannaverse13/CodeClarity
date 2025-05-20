@@ -46,9 +46,15 @@ export default function Home() {
 
     if (isGeneralExplanation) {
       setSensayAnalysisResult(null); 
-      // Optionally clear chat history or add a system message when new code is explained
-      // setChatHistory([]); // Clears chat history
+      // Add initial assistant message for chat when new code is explained
+      setChatHistory([{id: crypto.randomUUID(), role: 'assistant', content: "I've analyzed the code. Feel free to ask follow-up questions here."}]);
+    } else {
+        // Add user's message to chat history immediately for chat requests
+        if (question !== currentUserChatMessage && currentUserChatMessage.trim() !== '') { // Avoid duplicating if already added by send handler
+            // This branch might not be hit if send handler always updates history first
+        }
     }
+
 
     try {
       const response = await fetch('/api/ask-sensay-expert', {
@@ -67,22 +73,23 @@ export default function Home() {
         if (isGeneralExplanation) {
           setSensayAnalysisResult(responseData.expertAnswer);
           toast({ title: "Code Explained", description: "Sensay AI has provided an analysis." });
-          setChatHistory(prev => [...prev, {id: crypto.randomUUID(), role: 'assistant', content: "I've analyzed the code. Feel free to ask follow-up questions here."}]);
+          // Chat history already updated above for general explanation
         } else {
           setChatHistory(prev => [...prev, { id: crypto.randomUUID(), role: 'assistant', content: responseData.expertAnswer }]);
         }
       } else {
         const errorMsg = responseData.error || `Sensay API error: ${response.statusText}`;
-        setSensayError(errorMsg);
+        setSensayError(errorMsg); // Set error for the specific action
         if (isGeneralExplanation) {
           toast({ title: "Analysis Error", description: errorMsg, variant: "destructive" });
         } else {
+          // For chat, add error as an assistant message
           setChatHistory(prev => [...prev, {id: crypto.randomUUID(), role: 'assistant', content: `Sorry, I encountered an error: ${errorMsg}`}]);
         }
       }
     } catch (error) {
       const msg = error instanceof Error ? error.message : "An unknown error occurred while contacting Sensay.";
-      setSensayError(msg);
+      setSensayError(msg); // Set error for the specific action
       if (isGeneralExplanation) {
         toast({ title: "Connection Error", description: msg, variant: "destructive" });
       } else {
@@ -100,7 +107,8 @@ export default function Home() {
       return;
     }
     setCurrentCodeSnippet(codeToExplain);
-    // This detailed prompt is now constructed here and passed as the 'question' for a general explanation
+    setChatHistory([]); // Clear chat when new code is explained
+    
     const detailedPrompt = `Please provide a comprehensive analysis of the following code snippet. Your analysis MUST be in well-formatted markdown and include ALL of the following sections if applicable, each clearly delineated by its title in bold (e.g., **Detected Language**:, **Comprehensive Analysis**:, etc.):
 1.  **Detected Language**: (e.g., Python, JavaScript, or "Could not reliably detect language")
 2.  **Comprehensive Analysis**: 
@@ -135,7 +143,6 @@ ${codeToExplain}
     };
     setChatHistory(prev => [...prev, newMessage]);
     
-    // Use currentCodeSnippet for context, even if it's empty
     handleSensayRequest(currentCodeSnippet, currentUserChatMessage, false);
     setCurrentUserChatMessage('');
   };
@@ -148,9 +155,6 @@ ${codeToExplain}
     setChatHistory([]);
     setCurrentUserChatMessage('');
     setCurrentAction(null);
-    // Clear the code in CodeInput as well
-    // This might require a ref or a callback to CodeInput if it maintains its own state
-    // For now, let's assume CodeInput's state will be reset via its props or key change.
     toast({ title: "Cleared", description: "All inputs and analyses have been cleared." });
   };
 
@@ -188,7 +192,7 @@ ${codeToExplain}
               <CodeInput
                 initialCode={currentCodeSnippet}
                 onExplainCode={handleExplainCode}
-                onClear={handleClear} // Pass handleClear to CodeInput
+                onClear={handleClear} 
                 isLoading={isSensayLoading && currentAction === 'explain'}
               />
             </CardContent>
@@ -202,7 +206,6 @@ ${codeToExplain}
               <CardTitle className="text-lg">AI Analysis</CardTitle>
             </CardHeader>
             <CardContent className="flex-1 p-1 overflow-y-auto">
-              {/* This div ensures consistent padding/margin if CodeExplanationDisplay returns null */}
               <div className="h-full"> 
                 <CodeExplanationDisplay
                   analysisResult={sensayAnalysisResult}
@@ -220,7 +223,7 @@ ${codeToExplain}
             <CardHeader className="py-4 px-6">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <MessageSquareHeart className="h-6 w-6 text-primary" />
-                Code Mentor (Sensay AI)
+                Code Mentor (Sensay Replica AI)
               </CardTitle>
             </CardHeader>
             <CardContent ref={chatContainerRef} className="flex-1 p-4 space-y-3 overflow-y-auto bg-muted/20 rounded-t-md">
@@ -242,7 +245,6 @@ ${codeToExplain}
                     {msg.role === 'assistant' ? <Bot className="h-5 w-5 text-primary" /> : <User className="h-5 w-5" />}
                     <span className="font-semibold">{msg.role === 'user' ? 'You' : 'Code Mentor'}</span>
                   </div>
-                  {/* Using pre-wrap to respect newlines and prevent markdown interpretation for chat */}
                   <div className="whitespace-pre-wrap break-words">{msg.content}</div>
                 </div>
               ))}
@@ -285,6 +287,3 @@ ${codeToExplain}
     </div>
   );
 }
-
-
-    
