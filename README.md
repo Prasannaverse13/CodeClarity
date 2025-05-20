@@ -100,19 +100,19 @@ This dual approach allows CodeClarity to offer both a structured, detailed initi
     # This is CRUCIAL for the application to function.
 
     # SENSAY_API_KEY is your Organization Secret Key from Sensay.
-    # Example: SENSAY_API_KEY=e1cae7e85c39dc22aff0b7b154cf0795c355a2b3176dbf9945e0ec6cdecdb5dd
+    # Example: SENSAY_API_KEY=org_secret_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     SENSAY_API_KEY=YOUR_SENSAY_ORGANIZATION_SECRET_KEY_HERE
 
     # SENSAY_REPLICA_ID is the UUID of the AI Replica you create and train on the Sensay platform.
     # This is CRUCIAL. You will obtain this UUID AFTER successfully creating a Replica
     # owned by your SENSAY_USER_ID (see "Setting Up Your Sensay Code Mentor Replica" below).
-    # Example: SENSAY_REPLICA_ID=2e14f099-82bd-4cce-bee3-7dd77b5af291
+    # Example: SENSAY_REPLICA_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
     SENSAY_REPLICA_ID=YOUR_SENSAY_REPLICA_ID_HERE
 
     # SENSAY_USER_ID must correspond to a user ID you've created within
     # your Sensay organization (associated with the SENSAY_API_KEY). This user
     # MUST have access to the SENSAY_REPLICA_ID (ideally, be its owner).
-    # Example: SENSAY_USER_ID=default-codeclarity-user
+    # Example: SENSAY_USER_ID=your_chosen_user_id_for_the_app
     SENSAY_USER_ID=default-codeclarity-user
 
     # Sensay API Version (Recommended)
