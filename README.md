@@ -81,6 +81,18 @@ This dual approach allows CodeClarity to offer both a structured, detailed initi
 -   **Theme Provider & Toggle:** `src/components/theme-provider.tsx`, `src/components/theme-toggle.tsx` (Manages dark/light mode).
 -   **Environment Variables:** `.env` (Stores `SENSAY_API_KEY`, `SENSAY_REPLICA_ID`, `SENSAY_USER_ID`, `SENSAY_API_VERSION`).
 
+## Milestones
+
+*   Initial project setup and basic UI layout.
+*   Implemented code input and display components.
+*   Integrated with the Sensay API for code explanation.
+*   Developed the chat functionality for conversational interaction.
+*   Added theme toggle and responsive design.
+*   Sensay AI Replica character integration for interactive code mentorship.
+*   Implementation of a backend API route (/api/ask-sensay-expert/route.ts) to facilitate conversational chat with the Replica.
+*   Development of a three-column UI layout for structured code analysis and interactive chat.
+*   Integration of AI-driven core functionality using the Sensay Wisdom Engine API for code explanation and review.
+
 ## ⚙️ Setup & Running
 
 1.  **Clone the repository.**
